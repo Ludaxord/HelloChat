@@ -1,16 +1,36 @@
 import lzma
+import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
 
 import pandas as pd
+import requests
+from lxml.html import fromstring
 
 
 class Compression:
     destination_folder = None
+    dataset_source_url = "https://files.pushshift.io/reddit/comments/"
 
     def __init__(self, destination_folder):
         self.destination_folder = destination_folder
+
+    def download_dataset(self, url=dataset_source_url):
+        datasets = self.__get_dataset(url)
+        for dataset in datasets:
+            # req = urllib2.Request(dataset, headers={'User-Agent': 'Mozilla/5.0'})
+            # response = urllib2.urlopen(req)
+            urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}")
+
+    def __get_dataset(self, url):
+        response = requests.get(url)
+        parser = fromstring(response.text)
+        datasets = set()
+        for i in parser.xpath('//tbody/tr[@class="file"]'):
+            dataset = i.xpath('.//td/a')
+            datasets.add(f"{dataset[0].text_content()}")
+        return datasets
 
     def decompress_folder(self, compress_folder):
         f_list = self.__get_dir_files(compress_folder)
