@@ -1,9 +1,13 @@
 import lzma
+import shutil
 import sys
 import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
+
+from zstandard import ZstdDecompressor
+
 from hellochat.utils.printers import report_hook, print_red, print_green, print_blue
 import pandas as pd
 import requests
@@ -90,14 +94,19 @@ class Compression:
         return flist
 
     def __decompress_xz_file(self, file, with_extension):
-        pass
+        with lzma.open(file) as compressed:
+            file_name = f"{self.destination_folder}/{file.name}{with_extension}"
+            with open(file_name, 'wb') as destination:
+                shutil.copyfileobj(compressed, destination)
+        print(f"unpacked xz file completed to {file_name}")
 
     def __decompress_zst_file(self, file, with_extension):
-        unpacked_file = lzma.open(file)
-        data = unpacked_file.read()
-        file_name = f"{self.destination_folder}/{file.name}{with_extension}"
-        open(file_name, 'wb').write(data)
-        print(f"unpacked bz2 file completed to {file_name}")
+        with open(file, 'rb') as compressed:
+            decomp = ZstdDecompressor()
+            file_name = f"{self.destination_folder}/{file.name}{with_extension}"
+            with open(file_name, 'wb') as destination:
+                decomp.copy_stream(compressed, destination)
+        print(f"unpacked zst file completed to {file_name}")
 
     def __decompress_bz2_file(self, file, with_extension):
         unpacked_file = BZ2File(file)
