@@ -34,6 +34,8 @@ class Store(Compression):
                     parent_data = self.__find_parent(parent_id)
                     if score >= 2:
                         comment_score = self.__find_score(parent_id)
+                        if score > comment_score:
+                            pass
 
     def __find_score(self, pid):
         try:
