@@ -1,17 +1,16 @@
 import lzma
 import shutil
-import sys
 import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
 
-from zstandard import ZstdDecompressor
-
-from hellochat.utils.printers import report_hook, print_red, print_green, print_blue
 import pandas as pd
 import requests
 from lxml.html import fromstring
+from zstandard import ZstdDecompressor
+
+from hellochat.utils.printers import report_hook, print_red, print_green, print_blue
 
 
 class Compression:
@@ -25,12 +24,15 @@ class Compression:
         datasets = self.__get_dataset(url)
         for dataset in datasets:
             directory = Path(f"data/{dataset}")
-            if not directory.is_file():
-                print_blue(f"downloading file {dataset}")
-                urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}", reporthook=report_hook)
-                print_green(f"{dataset} file downloaded successfully")
-            else:
-                print_red(f"{dataset} already exists!")
+            try:
+                if not directory.exists():
+                    print_blue(f"downloading file {dataset}")
+                    urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}", reporthook=report_hook)
+                    print_green(f"{dataset} file downloaded successfully")
+                else:
+                    print_red(f"{dataset} already exists!")
+            except Exception as e:
+                print_red(f"cannot download data from url {url}{dataset}, {str(e)}")
 
     def decompress_folder(self, compress_folder):
         f_list = self.__get_dir_files(compress_folder)

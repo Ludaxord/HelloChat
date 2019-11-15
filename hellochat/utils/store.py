@@ -1,5 +1,6 @@
 import json
 import sqlite3
+import pandas as pd
 from datetime import datetime
 
 from hellochat.utils.compression import Compression
@@ -20,6 +21,13 @@ class Store(Compression):
         columns = dict(parent_id="TEXT PRIMARY KEY", comment_id="TEXT UNIQUE", parent="TEXT", comment="TEXT",
                        subreddit="TEXT", unix="INT", score="INT")
         self.create_table(self.cursor, "parent_reply", columns)
+
+    def create_data_portions(self, limit):
+        if self.cursor is None and self.connection is None:
+            self.cursor, self.connection = self.__get_cursor()
+            dataset = pd.read_sql(
+                "SELECT * FROM parent_reply WHERE parent NOT NULL and score > 0 ORDER BY unix ASC", self.connection)
+            return dataset
 
     def create_table(self, cursor, table_name, columns_dict):
         columns = ""
