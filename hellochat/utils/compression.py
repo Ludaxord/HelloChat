@@ -1,9 +1,10 @@
 import lzma
+import sys
 import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
-
+from hellochat.utils.printers import report_hook, print_red
 import pandas as pd
 import requests
 from lxml.html import fromstring
@@ -19,9 +20,9 @@ class Compression:
     def download_dataset(self, url=dataset_source_url):
         datasets = self.__get_dataset(url)
         for dataset in datasets:
-            # req = urllib2.Request(dataset, headers={'User-Agent': 'Mozilla/5.0'})
-            # response = urllib2.urlopen(req)
-            urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}")
+            dir = Path(f"data/{dataset}")
+            if not dir.is_file():
+                urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}", reporthook=report_hook)
 
     def __get_dataset(self, url):
         response = requests.get(url)
@@ -41,7 +42,7 @@ class Compression:
                 csv, part_dataset = self.json_to_csv(json, True)
                 dataset.join(part_dataset)
             except Exception as e:
-                print(f"cannot decompress file {file}, {e}")
+                print_red(f"cannot decompress file {file}, {e}")
         return dataset
 
     def decompress_file(self, file_path, with_extension):
