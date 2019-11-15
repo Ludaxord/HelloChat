@@ -4,7 +4,7 @@ import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
-from hellochat.utils.printers import report_hook, print_red
+from hellochat.utils.printers import report_hook, print_red, print_green, print_blue
 import pandas as pd
 import requests
 from lxml.html import fromstring
@@ -20,18 +20,13 @@ class Compression:
     def download_dataset(self, url=dataset_source_url):
         datasets = self.__get_dataset(url)
         for dataset in datasets:
-            dir = Path(f"data/{dataset}")
-            if not dir.is_file():
+            directory = Path(f"data/{dataset}")
+            if not directory.is_file():
+                print_blue(f"downloading file {dataset}")
                 urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}", reporthook=report_hook)
-
-    def __get_dataset(self, url):
-        response = requests.get(url)
-        parser = fromstring(response.text)
-        datasets = set()
-        for i in parser.xpath('//tbody/tr[@class="file"]'):
-            dataset = i.xpath('.//td/a')
-            datasets.add(f"{dataset[0].text_content()}")
-        return datasets
+                print_green(f"{dataset} file downloaded successfully")
+            else:
+                print_red(f"{dataset} already exists!")
 
     def decompress_folder(self, compress_folder):
         f_list = self.__get_dir_files(compress_folder)
@@ -76,6 +71,15 @@ class Compression:
             return csv_file, data_frame
         else:
             return csv_file, None
+
+    def __get_dataset(self, url):
+        response = requests.get(url)
+        parser = fromstring(response.text)
+        datasets = set()
+        for i in parser.xpath('//tbody/tr[@class="file"]'):
+            dataset = i.xpath('.//td/a')
+            datasets.add(f"{dataset[0].text_content()}")
+        return datasets
 
     def __get_dir_files(self, compress_folder):
         flist = []

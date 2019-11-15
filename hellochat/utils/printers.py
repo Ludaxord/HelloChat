@@ -36,7 +36,3 @@ def report_hook(block_number, block_size, total_size):
         percent = progress * 1e2 / total_size  # 1e2 ==> 1 * 10^2 ==> 100
         s = "\r%5.1f%% %*d / %d" % (percent, len(str(total_size)), progress, total_size)
         print_yellow(s)
-        if progress >= total_size:
-            print_green("\n")
-        else:
-            print_red(" read %d\n" % (progress,))
