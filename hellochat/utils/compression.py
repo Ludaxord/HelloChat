@@ -1,4 +1,5 @@
 import lzma
+import os
 import shutil
 import urllib.request as urllib2
 from bz2 import BZ2File
@@ -48,13 +49,15 @@ class Compression:
 
     def decompress_file(self, file_path, with_extension):
         file_path = Path(file_path)
+        file_name = os.path.splitext(file_path)[0]
+        print_blue(f"decompressing file: {file_name}{with_extension}")
         if file_path.suffix == ".bz2":
             self.__decompress_bz2_file(file_path, with_extension)
         elif file_path.suffix == ".zst":
             self.__decompress_zst_file(file_path, with_extension)
         elif file_path.suffix == ".xz":
             self.__decompress_xz_file(file_path, with_extension)
-        file_name = f"{self.destination_folder}/{file_path.name}{with_extension}"
+        file_name = f"{self.destination_folder}/{file_name}{with_extension}"
         self.replace_occurrences(file_name, "}", "},")
 
         return file_name
@@ -97,25 +100,28 @@ class Compression:
 
     def __decompress_xz_file(self, file, with_extension):
         with lzma.open(file) as compressed:
+            filename = os.path.splitext(file)[0]
             file_name = f"{self.destination_folder}/{file.name}{with_extension}"
             with open(file_name, 'wb') as destination:
                 shutil.copyfileobj(compressed, destination)
-        print(f"unpacked xz file completed to {file_name}")
+        print_green(f"unpacked xz file completed to {file_name}")
 
     def __decompress_zst_file(self, file, with_extension):
         with open(file, 'rb') as compressed:
             decomp = ZstdDecompressor()
+            filename = os.path.splitext(file)[0]
             file_name = f"{self.destination_folder}/{file.name}{with_extension}"
             with open(file_name, 'wb') as destination:
                 decomp.copy_stream(compressed, destination)
-        print(f"unpacked zst file completed to {file_name}")
+        print_green(f"unpacked zst file completed to {file_name}")
 
     def __decompress_bz2_file(self, file, with_extension):
         unpacked_file = BZ2File(file)
         data = unpacked_file.read()
+        filename = os.path.splitext(file)[0]
         file_name = f"{self.destination_folder}/{file.name}{with_extension}"
         open(file_name, 'wb').write(data)
-        print(f"unpacked bz2 file completed to {file_name}")
+        print_green(f"unpacked bz2 file completed to {file_name}")
 
     def __append_array_to_file(self, file_name):
         with open(f'{file_name}', 'r+') as f:
