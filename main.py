@@ -7,4 +7,5 @@ compress = Compression("data/unpacked")
 
 # compress.download_dataset()
 
-dataset = compress.decompress_folder("data/")
+# dataset = compress.decompress_folder("data/")
+# dataset = compress.replace_occurrences("data/unpacked/RC_2019-06.json", "}", "},")
