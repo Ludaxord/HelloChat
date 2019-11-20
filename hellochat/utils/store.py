@@ -46,7 +46,12 @@ class Store(Compression):
         f_list = self.__get_dir_files(self.destination_folder)
         for f_name in f_list:
             with open(f_name, buffering=1000) as f:
-                data = json.load(f)
+                try:
+                    data = json.load(f)
+                except Exception as e:
+                    print_red(f"cannot load file as default string, {e}")
+                else:
+                    data = self.load_json(f)
                 for element in data:
                     row_counter += 1
                     parent_id = element['parent_id']

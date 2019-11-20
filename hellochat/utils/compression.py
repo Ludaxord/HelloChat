@@ -1,3 +1,4 @@
+import json
 import lzma
 import os
 import shutil
@@ -5,6 +6,7 @@ import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
+from jsoncomment import JsonComment
 
 import pandas as pd
 import requests
@@ -20,6 +22,12 @@ class Compression:
 
     def __init__(self, destination_folder):
         self.destination_folder = destination_folder
+
+    def load_json(self, file_name):
+        with open(file_name) as data_file:
+            parser = JsonComment(json)
+            data = parser.load(data_file)
+            return data
 
     def download_dataset(self, url=dataset_source_url):
         datasets = self.__get_dataset(url)
@@ -58,7 +66,6 @@ class Compression:
         elif file_path.suffix == ".xz":
             self.__decompress_xz_file(file_path, with_extension)
         file_name = f"{self.destination_folder}/{file_name}{with_extension}"
-        self.replace_occurrences(file_name, "}\n", "},")
 
         return file_name
 
