@@ -58,7 +58,7 @@ class Compression:
         elif file_path.suffix == ".xz":
             self.__decompress_xz_file(file_path, with_extension)
         file_name = f"{self.destination_folder}/{file_name}{with_extension}"
-        self.replace_occurrences(file_name, "}", "},")
+        self.replace_occurrences(file_name, "}\n", "},")
 
         return file_name
 
