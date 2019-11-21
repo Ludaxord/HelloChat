@@ -58,7 +58,7 @@ class Store(Compression):
                 with open(file, buffering=1000) as f:
                     for data in f:
                         element = json.loads(data)
-                        print_blue(element)
+                        print_green(element)
                         # for element in data:
                         row_counter += 1
 
