@@ -7,4 +7,6 @@ compress = Store("data/unpacked")
 
 # compress.download_dataset()
 
-dataset = compress.decompress_folder("data/")
+# dataset = compress.decompress_folder("data/")
+
+compress.init_downloaded_data()

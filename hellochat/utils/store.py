@@ -1,10 +1,15 @@
 import json
+import os
 import sqlite3
+from pathlib import Path
+
 import pandas as pd
 from datetime import datetime
 
+from jsoncomment import JsonComment
+
 from hellochat.utils.compression import Compression
-from hellochat.utils.printers import print_red, print_yellow, print_green
+from hellochat.utils.printers import print_red, print_yellow, print_green, print_blue
 
 
 class Store(Compression):
@@ -31,7 +36,7 @@ class Store(Compression):
 
     def create_table(self, cursor, table_name, columns_dict):
         columns = ""
-        for index, column_name, column_type in enumerate(columns_dict):
+        for index, (column_name, column_type) in enumerate(columns_dict.items()):
             if index == len(columns_dict) - 1:
                 columns += f"{column_name} {column_type}"
             else:
@@ -43,42 +48,56 @@ class Store(Compression):
     def init_downloaded_data(self):
         row_counter = 0
         paired_rows = 0
-        f_list = self.__get_dir_files(self.destination_folder)
+        f_list = self._get_dir_files(self.destination_folder)
+        dir_path = Path(__file__).parent.parent.parent
         for f_name in f_list:
-            with open(f_name, buffering=1000) as f:
-                try:
-                    data = json.load(f)
-                except Exception as e:
-                    print_red(f"cannot load file as default string, {e}")
-                else:
-                    data = self.load_json(f)
-                for element in data:
-                    row_counter += 1
-                    parent_id = element['parent_id']
-                    body = self.__format_data(element['body'])
-                    created_utc = element['created_utc']
-                    score = element['score']
-                    comment_id = element['name']
-                    subreddit = element['subreddit']
-                    parent_data = self.__find_parent(parent_id)
-                    if score >= 2:
-                        comment_score = self.__find_score(parent_id)
-                        if comment_score:
-                            if score > comment_score:
+            if f_name.suffix == '.json':
+                file = f"{dir_path}/{f_name}"
+                print_blue(file)
+
+                with open(file, buffering=1000) as f:
+                    for data in f:
+                        element = json.loads(data)
+                        print_blue(element)
+                        # for element in data:
+                        row_counter += 1
+
+                        parent_id = element['parent_id']
+                        body = self.__format_data(element['body'])
+                        created_utc = element['created_utc']
+                        score = element['score']
+                        try:
+                            comment_id = element['name']
+                        except Exception as e:
+                            print_yellow(f"comment id by name do not exists, {e}")
+                        try:
+                            comment_id = element['id']
+                        except Exception as e:
+                            print_yellow(f"comment id by id do not exists, {e}")
+                        subreddit = element['subreddit']
+                        parent_data = self.__find_parent(parent_id)
+                        if score >= 2:
+                            comment_score = self.__find_score(parent_id)
+                            if comment_score:
+                                if score > comment_score:
+                                    if self.__acceptable(body):
+                                        self.insert_or_replace_comment(comment_id, parent_id, parent_data, body,
+                                                                       subreddit,
+                                                                       created_utc, score)
+                            else:
                                 if self.__acceptable(body):
-                                    self.insert_or_replace_comment(comment_id, parent_id, parent_data, body, subreddit,
-                                                                   created_utc, score)
-                        else:
-                            if self.__acceptable(body):
-                                if parent_data:
-                                    self.insert_parent(True, comment_id, parent_id, parent_data, body, subreddit,
-                                                       created_utc, score)
-                                    paired_rows += 1
-                                else:
-                                    self.insert_parent(False, comment_id, parent_id, None, body, subreddit, created_utc,
-                                                       score)
-                    self.display_rows(row_counter, data, paired_rows)
-                    self.clean_rows(row_counter, data)
+                                    if parent_data:
+                                        self.insert_parent(True, comment_id, parent_id, parent_data, body, subreddit,
+                                                           created_utc, score)
+                                        paired_rows += 1
+                                    else:
+                                        self.insert_parent(False, comment_id, parent_id, None, body, subreddit,
+                                                           created_utc,
+                                                           score)
+                        self.display_rows(row_counter, data, paired_rows)
+                        self.clean_rows(row_counter, data)
+            else:
+                print_red(f"file of name {f_name} is not a json file")
 
     def insert_or_replace_comment(self, comment_id, parent_id, parent, comment, subreddit, time, score):
         try:
@@ -86,7 +105,7 @@ class Store(Compression):
                 parent_id, comment_id, parent, comment, subreddit, int(time), score, parent_id)
             self.transaction_bldr(query)
         except Exception as e:
-            print_red(f"cannot inset comment on id {comment_id}, {str(e)}")
+            print_red(f"cannot update comment on id {comment_id}, {str(e)}")
 
     def insert_parent(self, has_parent, parent_id, comment_id, parent, comment, subreddit, time, score):
         try:

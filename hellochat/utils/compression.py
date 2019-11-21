@@ -6,6 +6,8 @@ import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
+
+from chardet import detect
 from jsoncomment import JsonComment
 
 import pandas as pd
@@ -13,7 +15,7 @@ import requests
 from lxml.html import fromstring
 from zstandard import ZstdDecompressor
 
-from hellochat.utils.printers import report_hook, print_red, print_green, print_blue
+from hellochat.utils.printers import report_hook, print_red, print_green, print_blue, print_yellow
 
 
 class Compression:
@@ -23,11 +25,20 @@ class Compression:
     def __init__(self, destination_folder):
         self.destination_folder = destination_folder
 
-    def load_json(self, file_name):
-        with open(file_name) as data_file:
-            parser = JsonComment(json)
-            data = parser.load(data_file)
-            return data
+    def get_encoding_type(self, file):
+        print_blue(file)
+        with open(file, 'rb') as f:
+            rawdata = f.read()
+        return detect(rawdata)['encoding']
+
+    def _load_json(self, file_name, encoding='utf-8', errors='ignore'):
+        try:
+            with open(file_name, encoding=encoding, errors=errors) as data_file:
+                parser = JsonComment(json)
+                data = parser.load(data_file)
+                return data
+        except Exception as e:
+            print_yellow(f"cannot load json from {file_name}, {e}")
 
     def download_dataset(self, url=dataset_source_url):
         datasets = self.__get_dataset(url)
@@ -44,12 +55,12 @@ class Compression:
                 print_red(f"cannot download data from url {url}{dataset}, {str(e)}")
 
     def decompress_folder(self, compress_folder):
-        f_list = self.__get_dir_files(compress_folder)
+        f_list = self._get_dir_files(compress_folder)
         dataset = pd.DataFrame()
         for file in f_list:
             try:
-                json = self.decompress_file(file, ".json")
-                csv, part_dataset = self.json_to_csv(json, True)
+                j = self.decompress_file(file, ".json")
+                csv, part_dataset = self.json_to_csv(j, True)
                 dataset.join(part_dataset)
             except Exception as e:
                 print_red(f"cannot decompress file {file}, {e}")
@@ -97,7 +108,7 @@ class Compression:
             datasets.add(f"{dataset[0].text_content()}")
         return datasets
 
-    def __get_dir_files(self, compress_folder):
+    def _get_dir_files(self, compress_folder):
         flist = []
         for p in Path(compress_folder).iterdir():
             if p.is_file():

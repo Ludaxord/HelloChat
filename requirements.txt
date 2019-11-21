@@ -1,3 +1,4 @@
+jsoncomment
 zstandard
 requests
 lxml
