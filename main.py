@@ -6,15 +6,18 @@ from hellochat.utils.sources.reddit import Reddit
 args = chat_args()
 
 source = args.source
+destination = "data/unpacked"
+
 if source == "imessage":
-    imessage = AppleIMessage("data/unpacked")
-    imessage.get_imessages()
+    imessage = AppleIMessage(destination)
+    dataset = imessage.load_imessages_from_file()
+    print(dataset)
 elif source == "reddit":
-    reddit = Reddit("data/unpacked")
-    # json = compress.decompress_file("data/RC_2005-12.bz2", ".json")
-    # json = compress.decompress_file("data/RC_2019-06.zst", ".json")
-    # compress.download_dataset()
-    # dataset = compress.decompress_folder("data/")
+    reddit = Reddit(destination)
+    # json = reddit.decompress_file("data/RC_2005-12.bz2", ".json")
+    # json = reddit.decompress_file("data/RC_2019-06.zst", ".json")
+    # reddit.download_dataset()
+    # dataset = reddit.decompress_folder("data/")
     reddit.init_downloaded_data()
 elif source == "messenger":
-    messenger = FacebookMessenger("data/unpacked")
+    messenger = FacebookMessenger(destination)

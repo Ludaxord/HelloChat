@@ -11,7 +11,7 @@ from hellochat.utils.printers import print_red, print_yellow, print_green, print
 class Reddit(Compression):
 
     def __init__(self, destination_folder):
-        super().__init__(destination_folder)
+        super().__init__(f"{destination_folder}/reddit")
         self.init_default_table()
 
     def init_default_table(self):
@@ -32,7 +32,7 @@ class Reddit(Compression):
         row_counter = 0
         paired_rows = 0
         f_list = self._get_dir_files(self.destination_folder)
-        dir_path = Path(__file__).parent.parent.parent
+        dir_path = Path(__file__).parent.parent.parent.parent
         for f_name in f_list:
             if f_name.suffix == '.json':
                 file = f"{dir_path}/{f_name}"
@@ -62,17 +62,14 @@ class Reddit(Compression):
                             f"parent_id => {parent_id}, body => {body}, created_utc => {created_utc}, comment_id => {comment_id}, subreddit => {subreddit}, parent_data => {parent_data}")
                         if score >= 2:
                             comment_score = self.__find_score(parent_id)
-                            print_cyan(f"comment_score => {comment_score}")
                             if comment_score:
                                 if score > comment_score:
                                     if self.__acceptable(body):
-                                        print_magenta(f"acceptable => {self.__acceptable(body)}")
                                         self.insert_or_replace_comment(comment_id, parent_id, parent_data, body,
                                                                        subreddit,
                                                                        created_utc, score)
                             else:
                                 if self.__acceptable(body):
-                                    print_magenta(f"acceptable => {self.__acceptable(body)}")
                                     if parent_data:
                                         self.insert_parent(True, comment_id, parent_id, parent_data, body, subreddit,
                                                            created_utc, score)
@@ -90,6 +87,7 @@ class Reddit(Compression):
         try:
             query = """UPDATE reddit_comments SET parent_id = ?, comment_id = ?, parent = ?, comment = ?, subreddit = ?, unix = ?, score = ? WHERE parent_id = ?;""".format(
                 parent_id, comment_id, parent, comment, subreddit, int(time), score, parent_id)
+            print_magenta(f"update => {query}")
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update comment on id {comment_id}, {str(e)}")
@@ -105,6 +103,7 @@ class Reddit(Compression):
                 query += """(parent_id, comment_id, comment, subreddit, unix, score) VALUES ("{}", "{}", "{}", "{}", "{}", "{}")""".format(
                     parent_id, comment_id, comment,
                     subreddit, int(time), score)
+            print_cyan(f"insert => {query}")
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot insert parent comment of id {comment_id}, {str(e)}")
