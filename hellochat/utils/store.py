@@ -9,7 +9,7 @@ from datetime import datetime
 from jsoncomment import JsonComment
 
 from hellochat.utils.compression import Compression
-from hellochat.utils.printers import print_red, print_yellow, print_green, print_blue
+from hellochat.utils.printers import print_red, print_yellow, print_green, print_blue, print_magenta, print_cyan
 
 
 class Store(Compression):
@@ -58,10 +58,9 @@ class Store(Compression):
                 with open(file, buffering=1000) as f:
                     for data in f:
                         element = json.loads(data)
-                        print_green(element)
                         # for element in data:
                         row_counter += 1
-
+                        print_blue(element)
                         parent_id = element['parent_id']
                         body = self.__format_data(element['body'])
                         created_utc = element['created_utc']
@@ -76,16 +75,21 @@ class Store(Compression):
                             print_yellow(f"comment id by id do not exists, {e}")
                         subreddit = element['subreddit']
                         parent_data = self.__find_parent(parent_id)
+                        print_green(
+                            f"parent_id => {parent_id}, body => {body}, created_utc => {created_utc}, comment_id => {comment_id}, subreddit => {subreddit}, parent_data => {parent_data}")
                         if score >= 2:
                             comment_score = self.__find_score(parent_id)
+                            print_cyan(f"comment_score => {comment_score}")
                             if comment_score:
                                 if score > comment_score:
                                     if self.__acceptable(body):
+                                        print_magenta(f"acceptable => {self.__acceptable(body)}")
                                         self.insert_or_replace_comment(comment_id, parent_id, parent_data, body,
                                                                        subreddit,
                                                                        created_utc, score)
                             else:
                                 if self.__acceptable(body):
+                                    print_magenta(f"acceptable => {self.__acceptable(body)}")
                                     if parent_data:
                                         self.insert_parent(True, comment_id, parent_id, parent_data, body, subreddit,
                                                            created_utc, score)
@@ -109,36 +113,37 @@ class Store(Compression):
 
     def insert_parent(self, has_parent, parent_id, comment_id, parent, comment, subreddit, time, score):
         try:
-            query = """INSERT INTO parent_reply (parent_id, comment_id, parent, comment, subreddit, unix, score) VALUES """
+            query = """INSERT INTO parent_reply """
             if has_parent:
-                query += """("{}", "{}", "{}", "{}", "{}", "{}", "{}")""".format(parent_id, comment_id, parent, comment,
-                                                                                 subreddit, int(time), score)
+                query += """(parent_id, comment_id, parent, comment, subreddit, unix, score) VALUES ("{}", "{}", "{}", "{}", "{}", "{}", "{}")""".format(
+                    parent_id, comment_id, parent, comment,
+                    subreddit, int(time), score)
             else:
-                query += """("{}", "{}", "{}", "{}", "{}", "{}")""".format(parent_id, comment_id, comment,
-                                                                           subreddit, int(time), score)
+                query += """(parent_id, comment_id, comment, subreddit, unix, score) VALUES ("{}", "{}", "{}", "{}", "{}", "{}")""".format(
+                    parent_id, comment_id, comment,
+                    subreddit, int(time), score)
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot insert parent comment of id {comment_id}, {str(e)}")
 
     def transaction_bldr(self, query):
-        global sql_transaction
-        sql_transaction.append(query)
-        if len(sql_transaction) > 1000:
+        self.sql_transaction.append(query)
+        if len(self.sql_transaction) > 1000:
             if self.cursor is None:
                 self.cursor, self.connection = self.__get_cursor()
             self.cursor.execute("BEGIN TRANSACTION")
-            for s in sql_transaction:
+            for s in self.sql_transaction:
                 try:
                     self.cursor.execute(s)
                 except Exception as e:
                     print_yellow(f"cannot execute query {s}, {str(e)}")
             self.connection.commit()
-            sql_transaction = []
+            self.sql_transaction = []
 
     def clean_rows(self, row_counter, data, start_row=0):
         if row_counter > start_row:
             if row_counter % len(data) == 0:
-                print_green("cleaning up!")
+                print_magenta("cleaning up!")
                 query = "DELETE FROM parent_reply WHERE parent IS NULL"
                 if self.cursor is None:
                     self.cursor, self.connection = self.__get_cursor()
