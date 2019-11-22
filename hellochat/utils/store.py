@@ -25,13 +25,14 @@ class Store(Compression):
         self.cursor, self.connection = self.__get_cursor()
         columns = dict(parent_id="TEXT PRIMARY KEY", comment_id="TEXT UNIQUE", parent="TEXT", comment="TEXT",
                        subreddit="TEXT", unix="INT", score="INT")
-        self.create_table(self.cursor, "parent_reply", columns)
+        self.create_table(self.cursor, "reddit_comments", columns)
 
     def create_data_portions(self, limit):
         if self.cursor is None and self.connection is None:
             self.cursor, self.connection = self.__get_cursor()
             dataset = pd.read_sql(
-                "SELECT * FROM parent_reply WHERE parent NOT NULL and score > 0 ORDER BY unix ASC", self.connection)
+                "SELECT * FROM reddit_comments WHERE parent NOT NULL AND parent != comment AND score > 0 ORDER BY unix ASC",
+                self.connection)
             return dataset
 
     def create_table(self, cursor, table_name, columns_dict):
@@ -105,7 +106,7 @@ class Store(Compression):
 
     def insert_or_replace_comment(self, comment_id, parent_id, parent, comment, subreddit, time, score):
         try:
-            query = """UPDATE parent_reply SET parent_id = ?, comment_id = ?, parent = ?, comment = ?, subreddit = ?, unix = ?, score = ? WHERE parent_id = ?;""".format(
+            query = """UPDATE reddit_comments SET parent_id = ?, comment_id = ?, parent = ?, comment = ?, subreddit = ?, unix = ?, score = ? WHERE parent_id = ?;""".format(
                 parent_id, comment_id, parent, comment, subreddit, int(time), score, parent_id)
             self.transaction_bldr(query)
         except Exception as e:
@@ -113,7 +114,7 @@ class Store(Compression):
 
     def insert_parent(self, has_parent, parent_id, comment_id, parent, comment, subreddit, time, score):
         try:
-            query = """INSERT INTO parent_reply """
+            query = """INSERT INTO reddit_comments """
             if has_parent:
                 query += """(parent_id, comment_id, parent, comment, subreddit, unix, score) VALUES ("{}", "{}", "{}", "{}", "{}", "{}", "{}")""".format(
                     parent_id, comment_id, parent, comment,
@@ -144,7 +145,7 @@ class Store(Compression):
         if row_counter > start_row:
             if row_counter % len(data) == 0:
                 print_magenta("cleaning up!")
-                query = "DELETE FROM parent_reply WHERE parent IS NULL"
+                query = "DELETE FROM reddit_comments WHERE parent IS NULL"
                 if self.cursor is None:
                     self.cursor, self.connection = self.__get_cursor()
                 self.cursor.execute(query)
@@ -171,7 +172,7 @@ class Store(Compression):
 
     def __find_score(self, pid):
         try:
-            query = "SELECT score FROM parent_reply WHERE parent_id = '{}' LIMIT 1".format(pid)
+            query = "SELECT score FROM reddit_comments WHERE parent_id = '{}' LIMIT 1".format(pid)
             if self.cursor is None:
                 self.cursor, self.connection = self.__get_cursor()
             self.cursor.execute(query)
@@ -186,7 +187,7 @@ class Store(Compression):
 
     def __find_parent(self, pid):
         try:
-            query = "SELECT comment FROM parent_reply WHERE comment_id = '{}' LIMIT 1".format(pid)
+            query = "SELECT comment FROM reddit_comments WHERE comment_id = '{}' LIMIT 1".format(pid)
             if self.cursor is None:
                 self.cursor, self.connection = self.__get_cursor()
             self.cursor.execute(query)
