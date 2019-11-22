@@ -2,6 +2,7 @@ import json
 import lzma
 import os
 import shutil
+import sqlite3
 import urllib.request as urllib2
 from bz2 import BZ2File
 from fileinput import FileInput
@@ -19,17 +20,51 @@ from hellochat.utils.printers import report_hook, print_red, print_green, print_
 
 
 class Compression:
+    sql_transaction = []
+    cursor = None
+    connection = None
+
     destination_folder = None
     dataset_source_url = "https://files.pushshift.io/reddit/comments/"
 
     def __init__(self, destination_folder):
         self.destination_folder = destination_folder
 
+    def get_cursor(self, db="hello_chat_main.db"):
+        connection = sqlite3.connect(db)
+        cursor = connection.cursor()
+        return cursor, connection
+
+    def transaction_bldr(self, query):
+        self.sql_transaction.append(query)
+        if len(self.sql_transaction) > 1000:
+            if self.cursor is None:
+                self.cursor, self.connection = self.get_cursor()
+            self.cursor.execute("BEGIN TRANSACTION")
+            for s in self.sql_transaction:
+                try:
+                    self.cursor.execute(s)
+                except Exception as e:
+                    print_yellow(f"cannot execute query {s}, {str(e)}")
+            self.connection.commit()
+            self.sql_transaction = []
+
     def get_encoding_type(self, file):
         print_blue(file)
         with open(file, 'rb') as f:
             rawdata = f.read()
         return detect(rawdata)['encoding']
+
+    def create_table(self, cursor, table_name, columns_dict):
+        columns = ""
+        for index, (column_name, column_type) in enumerate(columns_dict.items()):
+            if index == len(columns_dict) - 1:
+                columns += f"{column_name} {column_type}"
+            else:
+                columns += f"{column_name} {column_type},"
+
+        columns = f"({columns})"
+        cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name}{columns}")
 
     def _load_json(self, file_name, encoding='utf-8', errors='ignore'):
         try:

@@ -1,6 +1,6 @@
-from hellochat.utils.store import Store
+from hellochat.utils.sources.reddit import Reddit
 
-compress = Store("data/unpacked")
+compress = Reddit("data/unpacked")
 
 # json = compress.decompress_file("data/RC_2005-12.bz2", ".json")
 # json = compress.decompress_file("data/RC_2019-06.zst", ".json")
