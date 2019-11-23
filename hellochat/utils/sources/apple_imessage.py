@@ -3,14 +3,95 @@ import sys
 from hellochat.utils.compression import Compression
 import pandas as pd
 
+from hellochat.utils.printers import print_red, print_magenta, print_cyan, print_green, print_blue
+
 
 class AppleIMessage(Compression):
     def __init__(self, destination_folder):
         super().__init__(f"{destination_folder}/imessage")
+        self.init_default_table()
 
     def __connect_with_i_message(self):
         cursor, connection = self.get_cursor(db="/Users/konraduciechowski/Library/Messages")
         return cursor, connection
+
+    def init_default_table(self):
+        self.cursor, self.connection = self.get_cursor()
+        columns = dict(guid="TEXT PRIMARY KEY", text="TEXT UNIQUE", handle_id="INT", date="INT", date_read="INT",
+                       date_delivered="INT",
+                       is_delivered="INT", is_finished="INT", is_emote="INT", is_from_me="INT", is_empty="INT",
+                       is_delayed="INT", is_auto_reply="INT", is_prepared="INT", is_read="INT", is_system_message="INT",
+                       is_sent="INT", has_dd_results="INT", is_spam="INT", cache_has_attachments="INT", item_type="INT",
+                       group_title="TEXT", is_expirable="INT", message_source="INT", destination_caller_id="TEXT",
+                       ck_record_id="TEXT", account="TEXT", service="TEXT")
+        self.create_table(self.cursor, "imessage_messages", columns)
+
+    def __find_message(self, pid):
+        try:
+            query = "SELECT text FROM imessage_messages WHERE guid = '{}' LIMIT 1".format(pid)
+            if self.cursor is None:
+                self.cursor, self.connection = self.get_cursor()
+            self.cursor.execute(query)
+            result = self.cursor.fetchone()
+            if result is not None:
+                return result[0]
+            else:
+                return False
+        except Exception as e:
+            print_red(f"cannot find message {str(e)}")
+            return False
+
+    def set_values_to_db(self):
+        dataset = self.load_imessages_from_file()
+        dataset = dataset.values.tolist()
+        for row in dataset:
+            print_green(row)
+            ROWID = row[0]
+            guid = row[1]
+            text = row[2]
+            handle_id = row[3]
+            service = row[4]
+            account = row[5]
+            date = row[6]
+            date_read = row[7]
+            date_delivered = row[8]
+            is_delivered = row[9]
+            is_finished = row[10]
+            is_emote = row[11]
+            is_from_me = row[12]
+            is_empty = row[13]
+            is_delayed = row[14]
+            is_auto_reply = row[15]
+            is_prepared = row[16]
+            is_read = row[17]
+            is_system_message = row[18]
+            is_sent = row[19]
+            has_dd_results = row[20]
+            cache_has_attachments = row[21]
+            item_type = row[22]
+            group_title = row[23]
+            is_expirable = row[24]
+            message_source = row[25]
+            ck_record_id = row[26]
+            destination_caller = row[27]
+            is_spam = row[28]
+            message = self.__find_message(guid)
+            if not message:
+                self.__set_message(ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+                                   is_delivered,
+                                   is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply, is_prepared,
+                                   is_read,
+                                   is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type,
+                                   group_title,
+                                   is_expirable, message_source, ck_record_id, destination_caller, is_spam)
+            else:
+                self.__update_message(ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+                                      is_delivered,
+                                      is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply,
+                                      is_prepared, is_read,
+                                      is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type,
+                                      group_title,
+                                      is_expirable, message_source, ck_record_id, destination_caller, is_spam)
 
     def get_imessages(self):
         cur, conn = self.__connect_with_i_message()
@@ -30,3 +111,57 @@ class AppleIMessage(Compression):
                                        'group_title', 'is_expirable', 'message_source', 'destination_caller_id',
                                        'ck_record_id', 'account', 'service'])
         return dataset
+
+    def __update_message(self, ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+                         is_delivered,
+                         is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply, is_prepared, is_read,
+                         is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type, group_title,
+                         is_expirable, message_source, ck_record_id, destination_caller, is_spam):
+        try:
+            query = f"UPDATE imessage_messages SET ROWID = {ROWID}, guid = '{guid}', text = '{text}', handle_id = {int(handle_id)}, `date` = {int(date)}, date_read = {int(date_read)}, date_delivered = {int(date_delivered)}, is_delivered = {int(is_delivered)}, is_finished = {int(is_finished)}, is_emote = {int(is_emote)}, is_from_me = {int(is_from_me)}, is_empty = {int(is_empty)}, is_delayed = {int(is_delayed)}, is_auto_reply = {int(is_auto_reply)}, is_prepared = {int(is_prepared)}, is_read = {int(is_read)}, is_system_message = {int(is_system_message)}, is_sent = {int(is_sent)}, has_dd_results = {int(has_dd_results)}, is_spam = {int(is_spam)}, cache_has_attachments = {int(cache_has_attachments)}, item_type = {int(item_type)}, group_title = '{group_title}', is_expirable = {int(is_expirable)}, message_source = {int(message_source)}, destination_caller_id = '{destination_caller}', ck_record_id = '{ck_record_id}', account = '{account}', service = '{service}' WHERE guid = '{guid}';"
+
+            print_magenta(f"update => {query}")
+            self.transaction_bldr(query)
+        except Exception as e:
+            print_red(f"cannot update message on id {guid}, {str(e)}")
+
+    def __set_message(self, ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+                      is_delivered,
+                      is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply, is_prepared, is_read,
+                      is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type, group_title,
+                      is_expirable, message_source, ck_record_id, destination_caller, is_spam):
+        try:
+            query = """INSERT INTO imessage_messages VALUES ("{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}")""".format(
+                guid,
+                text,
+                int(handle_id),
+                int(date),
+                int(date_read),
+                int(date_delivered),
+                int(is_delivered),
+                int(is_finished),
+                int(is_emote),
+                int(is_from_me),
+                int(is_empty),
+                int(is_delayed),
+                int(is_auto_reply),
+                int(is_prepared),
+                int(is_read),
+                int(is_system_message),
+                int(is_sent),
+                int(has_dd_results),
+                int(is_spam),
+                int(cache_has_attachments),
+                int(item_type),
+                group_title,
+                int(is_expirable),
+                int(message_source),
+                destination_caller,
+                ck_record_id,
+                service,
+                account,
+                ROWID)
+            print_cyan(f"set => {query}")
+            self.transaction_bldr(query)
+        except Exception as e:
+            print_red(f"cannot update message on id {guid}, {str(e)}")

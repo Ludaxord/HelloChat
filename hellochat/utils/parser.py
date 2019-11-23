@@ -4,7 +4,9 @@ from argparse import ArgumentParser
 def chat_args():
     return Parser(
         args=[{"command": "--source", "type": str,
-               "help": "soruce type options: reddit, messenger, imessage"}]).get_args()
+               "help": "source type options: reddit, messenger, imessage"},
+              {"command": "--sources", "nargs": '+',
+               "help": "list of source type options: reddit, messenger, imessage"}]).get_args()
 
 
 class Parser:
@@ -32,6 +34,8 @@ class Parser:
         for arg in args:
             if isinstance(arg, dict):
                 arg_command = arg.get("command")
+                arg_nargs = arg.get("nargs")
+                arg_action = arg.get("action")
                 arg_type = arg.get("type")
                 arg_help = arg.get("help")
-                self.parser.add_argument(arg_command, type=arg_type, help=arg_help)
+                self.parser.add_argument(arg_command, type=arg_type, nargs=arg_nargs, action=arg_action, help=arg_help)
