@@ -1,9 +1,10 @@
-import sys
+import datetime
+import time
 
-from hellochat.utils.compression import Compression
 import pandas as pd
 
-from hellochat.utils.printers import print_red, print_magenta, print_cyan, print_green, print_blue
+from hellochat.utils.compression import Compression
+from hellochat.utils.printers import print_red, print_magenta, print_cyan, print_green
 
 
 class AppleIMessage(Compression):
@@ -17,18 +18,18 @@ class AppleIMessage(Compression):
 
     def init_default_table(self):
         self.cursor, self.connection = self.get_cursor()
-        columns = dict(guid="TEXT PRIMARY KEY", text="TEXT UNIQUE", handle_id="INT", date="INT", date_read="INT",
+        columns = dict(guid="TEXT PRIMARY KEY", text="TEXT", handle_id="INT", date="INT", date_read="INT",
                        date_delivered="INT",
                        is_delivered="INT", is_finished="INT", is_emote="INT", is_from_me="INT", is_empty="INT",
                        is_delayed="INT", is_auto_reply="INT", is_prepared="INT", is_read="INT", is_system_message="INT",
                        is_sent="INT", has_dd_results="INT", is_spam="INT", cache_has_attachments="INT", item_type="INT",
                        group_title="TEXT", is_expirable="INT", message_source="INT", destination_caller_id="TEXT",
-                       ck_record_id="TEXT", account="TEXT", service="TEXT")
-        self.create_table(self.cursor, "imessage_messages", columns)
+                       ck_record_id="TEXT", account="TEXT", service="TEXT", ROWID="INT")
+        self.create_table(self.cursor, "imessage_chat", columns)
 
     def __find_message(self, pid):
         try:
-            query = "SELECT text FROM imessage_messages WHERE guid = '{}' LIMIT 1".format(pid)
+            query = "SELECT text FROM imessage_chat WHERE guid = '{}' LIMIT 1".format(pid)
             if self.cursor is None:
                 self.cursor, self.connection = self.get_cursor()
             self.cursor.execute(query)
@@ -44,7 +45,7 @@ class AppleIMessage(Compression):
     def set_values_to_db(self):
         dataset = self.load_imessages_from_file()
         dataset = dataset.values.tolist()
-        for row in dataset:
+        for index, row in enumerate(dataset):
             print_green(row)
             ROWID = row[0]
             guid = row[1]
@@ -75,9 +76,11 @@ class AppleIMessage(Compression):
             ck_record_id = row[26]
             destination_caller = row[27]
             is_spam = row[28]
+
             message = self.__find_message(guid)
             if not message:
-                self.__set_message(ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+                self.__set_message(ROWID, guid, text, handle_id, service, account, date, date_read,
+                                   date_delivered,
                                    is_delivered,
                                    is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply, is_prepared,
                                    is_read,
@@ -85,7 +88,8 @@ class AppleIMessage(Compression):
                                    group_title,
                                    is_expirable, message_source, ck_record_id, destination_caller, is_spam)
             else:
-                self.__update_message(ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+                self.__update_message(ROWID, guid, text, handle_id, service, account, date, date_read,
+                                      date_delivered,
                                       is_delivered,
                                       is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply,
                                       is_prepared, is_read,
@@ -101,6 +105,15 @@ class AppleIMessage(Compression):
         messages = pd.read_sql_query("select * from message", conn)
         return messages.to_json()
 
+    def get_parent_message(self, date, parent_date):
+        t = (2001, 1, 1, 0, 0, 0, 0, 0, 0)
+        t = time.mktime(t)
+        date = date / 1000000000 + int(time.strftime("%s", time.gmtime(t)))
+        parent_date = parent_date / 1000000000 + int(time.strftime("%s", time.gmtime(t)))
+        formatted_date = datetime.datetime.fromtimestamp(int(date))
+        formatted_parent_date = datetime.datetime.fromtimestamp(int(parent_date))
+        return formatted_date, formatted_parent_date
+
     def load_imessages_from_file(self):
         dataset = pd.read_csv(f"{self.destination_folder}/imessage.csv", sep=',', encoding='utf-8',
                               error_bad_lines=False, low_memory=False,
@@ -112,26 +125,30 @@ class AppleIMessage(Compression):
                                        'ck_record_id', 'account', 'service'])
         return dataset
 
-    def __update_message(self, ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+    def __update_message(self, ROWID, guid, text, handle_id, service, account, date, date_read,
+                         date_delivered,
                          is_delivered,
                          is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply, is_prepared, is_read,
                          is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type, group_title,
                          is_expirable, message_source, ck_record_id, destination_caller, is_spam):
         try:
-            query = f"UPDATE imessage_messages SET ROWID = {ROWID}, guid = '{guid}', text = '{text}', handle_id = {int(handle_id)}, `date` = {int(date)}, date_read = {int(date_read)}, date_delivered = {int(date_delivered)}, is_delivered = {int(is_delivered)}, is_finished = {int(is_finished)}, is_emote = {int(is_emote)}, is_from_me = {int(is_from_me)}, is_empty = {int(is_empty)}, is_delayed = {int(is_delayed)}, is_auto_reply = {int(is_auto_reply)}, is_prepared = {int(is_prepared)}, is_read = {int(is_read)}, is_system_message = {int(is_system_message)}, is_sent = {int(is_sent)}, has_dd_results = {int(has_dd_results)}, is_spam = {int(is_spam)}, cache_has_attachments = {int(cache_has_attachments)}, item_type = {int(item_type)}, group_title = '{group_title}', is_expirable = {int(is_expirable)}, message_source = {int(message_source)}, destination_caller_id = '{destination_caller}', ck_record_id = '{ck_record_id}', account = '{account}', service = '{service}' WHERE guid = '{guid}';"
+            text = text.replace('"', "'")
+            query = f"UPDATE imessage_chat SET ROWID = {ROWID}, guid = '{guid}', text = '{text}', handle_id = {int(handle_id)}, `date` = {int(date)}, date_read = {int(date_read)}, date_delivered = {int(date_delivered)}, is_delivered = {int(is_delivered)}, is_finished = {int(is_finished)}, is_emote = {int(is_emote)}, is_from_me = {int(is_from_me)}, is_empty = {int(is_empty)}, is_delayed = {int(is_delayed)}, is_auto_reply = {int(is_auto_reply)}, is_prepared = {int(is_prepared)}, is_read = {int(is_read)}, is_system_message = {int(is_system_message)}, is_sent = {int(is_sent)}, has_dd_results = {int(has_dd_results)}, is_spam = {int(is_spam)}, cache_has_attachments = {int(cache_has_attachments)}, item_type = {int(item_type)}, group_title = '{group_title}', is_expirable = {int(is_expirable)}, message_source = {int(message_source)}, destination_caller_id = '{destination_caller}', ck_record_id = '{ck_record_id}', account = '{account}', service = '{service}' WHERE guid = '{guid}';"
 
             print_magenta(f"update => {query}")
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {guid}, {str(e)}")
 
-    def __set_message(self, ROWID, guid, text, handle_id, service, account, date, date_read, date_delivered,
+    def __set_message(self, ROWID, guid, text, handle_id, service, account, date, date_read,
+                      date_delivered,
                       is_delivered,
                       is_finished, is_emote, is_from_me, is_empty, is_delayed, is_auto_reply, is_prepared, is_read,
                       is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type, group_title,
                       is_expirable, message_source, ck_record_id, destination_caller, is_spam):
         try:
-            query = """INSERT INTO imessage_messages VALUES ("{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}")""".format(
+            text = text.replace('"', "'")
+            query = """INSERT INTO imessage_chat VALUES ("{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}","{}")""".format(
                 guid,
                 text,
                 int(handle_id),
