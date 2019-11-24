@@ -8,15 +8,16 @@ from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
 
-from chardet import detect
-from jsoncomment import JsonComment
-
+import chardet
 import pandas as pd
 import requests
+from chardet import detect
+from jsoncomment import JsonComment
 from lxml.html import fromstring
 from zstandard import ZstdDecompressor
 
-from hellochat.utils.printers import report_hook, print_red, print_green, print_blue, print_yellow
+from hellochat.utils.printers import report_hook, print_red, print_green, print_blue, print_yellow, print_magenta, \
+    print_cyan
 
 
 class Compression:
@@ -29,6 +30,16 @@ class Compression:
 
     def __init__(self, destination_folder):
         self.destination_folder = destination_folder
+
+    def set_values_to_db(self):
+        pass
+
+    def convert_encoding(self, data):
+        try:
+            data = data.encode('iso-8859-1').decode('utf-8')
+        except Exception as e:
+            print_yellow(f"cannot get encoding from {data}, {str(e)}")
+        return data
 
     def get_cursor(self, db="hello_chat_main.db"):
         connection = sqlite3.connect(db)

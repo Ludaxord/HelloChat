@@ -1,5 +1,9 @@
 from argparse import ArgumentParser
 
+from hellochat.utils.sources.apple_imessage import AppleIMessage
+from hellochat.utils.sources.facebook_messenger import FacebookMessenger
+from hellochat.utils.sources.reddit import Reddit
+
 
 def chat_args():
     return Parser(
@@ -7,6 +11,18 @@ def chat_args():
                "help": "source type options: reddit, messenger, imessage"},
               {"command": "--sources", "nargs": '+',
                "help": "list of source type options: reddit, messenger, imessage"}]).get_args()
+
+
+def set_compressor(source_name, destination):
+    if source_name == "imessage":
+        imessage = AppleIMessage(destination)
+        return imessage
+    elif source_name == "reddit":
+        reddit = Reddit(destination)
+        return reddit
+    elif source_name == "messenger":
+        messenger = FacebookMessenger(destination)
+        return messenger
 
 
 class Parser:

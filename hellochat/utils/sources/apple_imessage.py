@@ -105,7 +105,7 @@ class AppleIMessage(Compression):
         messages = pd.read_sql_query("select * from message", conn)
         return messages.to_json()
 
-    def get_parent_message(self, date, parent_date):
+    def get_dates(self, date, parent_date):
         t = (2001, 1, 1, 0, 0, 0, 0, 0, 0)
         t = time.mktime(t)
         date = date / 1000000000 + int(time.strftime("%s", time.gmtime(t)))
@@ -132,7 +132,7 @@ class AppleIMessage(Compression):
                          is_system_message, is_sent, has_dd_results, cache_has_attachments, item_type, group_title,
                          is_expirable, message_source, ck_record_id, destination_caller, is_spam):
         try:
-            text = text.replace('"', "'")
+            text = text.replace("'", '"')
             query = f"UPDATE imessage_chat SET ROWID = {ROWID}, guid = '{guid}', text = '{text}', handle_id = {int(handle_id)}, `date` = {int(date)}, date_read = {int(date_read)}, date_delivered = {int(date_delivered)}, is_delivered = {int(is_delivered)}, is_finished = {int(is_finished)}, is_emote = {int(is_emote)}, is_from_me = {int(is_from_me)}, is_empty = {int(is_empty)}, is_delayed = {int(is_delayed)}, is_auto_reply = {int(is_auto_reply)}, is_prepared = {int(is_prepared)}, is_read = {int(is_read)}, is_system_message = {int(is_system_message)}, is_sent = {int(is_sent)}, has_dd_results = {int(has_dd_results)}, is_spam = {int(is_spam)}, cache_has_attachments = {int(cache_has_attachments)}, item_type = {int(item_type)}, group_title = '{group_title}', is_expirable = {int(is_expirable)}, message_source = {int(message_source)}, destination_caller_id = '{destination_caller}', ck_record_id = '{ck_record_id}', account = '{account}', service = '{service}' WHERE guid = '{guid}';"
 
             print_magenta(f"update => {query}")

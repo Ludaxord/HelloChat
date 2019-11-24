@@ -28,7 +28,7 @@ class Reddit(Compression):
                 self.connection)
             return dataset
 
-    def init_downloaded_data(self):
+    def set_values_to_db(self):
         row_counter = 0
         paired_rows = 0
         f_list = self._get_dir_files(self.destination_folder)
