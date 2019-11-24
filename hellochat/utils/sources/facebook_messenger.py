@@ -2,7 +2,7 @@ import glob
 import json
 
 from hellochat.utils.compression import Compression
-from hellochat.utils.printers import print_green, print_yellow, print_red, print_cyan, print_magenta, print_blue
+from hellochat.utils.tools.printers import print_green, print_yellow, print_red, print_cyan, print_magenta, print_blue
 
 
 class FacebookMessenger(Compression):

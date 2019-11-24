@@ -1,4 +1,4 @@
-from hellochat.utils.parser import chat_args, set_compressor
+from hellochat.utils.tools.parser import chat_args, set_compressor
 
 args = chat_args()
 

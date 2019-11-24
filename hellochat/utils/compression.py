@@ -8,7 +8,6 @@ from bz2 import BZ2File
 from fileinput import FileInput
 from pathlib import Path
 
-import chardet
 import pandas as pd
 import requests
 from chardet import detect
@@ -16,8 +15,7 @@ from jsoncomment import JsonComment
 from lxml.html import fromstring
 from zstandard import ZstdDecompressor
 
-from hellochat.utils.printers import report_hook, print_red, print_green, print_blue, print_yellow, print_magenta, \
-    print_cyan
+from hellochat.utils.tools.printers import report_hook, print_red, print_green, print_blue, print_yellow
 
 
 class Compression:

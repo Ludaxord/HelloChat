@@ -5,7 +5,7 @@ from pathlib import Path
 import pandas as pd
 
 from hellochat.utils.compression import Compression
-from hellochat.utils.printers import print_red, print_yellow, print_green, print_blue, print_magenta, print_cyan
+from hellochat.utils.tools.printers import print_red, print_yellow, print_green, print_blue, print_magenta, print_cyan
 
 
 class Reddit(Compression):
