@@ -83,12 +83,12 @@ class Google(Compression):
     def __set_message(self, event_id, text, sender_id, fallback_name, timestamp, conversation_id, event_type):
         try:
             text = text.replace('"', "'")
-            query = """INSERT INTO hangouts_chat VALUES ("{}","{}","{}","{}","{}","{}", "{}")""".format(event_id, text,
-                                                                                                        int(sender_id),
-                                                                                                        fallback_name,
-                                                                                                        int(timestamp),
-                                                                                                        conversation_id,
-                                                                                                        event_type)
+            query = """INSERT INTO hangouts_chat VALUES ("{}","{}","{}","{}","{}","{}","{}")""".format(event_id, text,
+                                                                                                       int(sender_id),
+                                                                                                       fallback_name,
+                                                                                                       int(timestamp),
+                                                                                                       conversation_id,
+                                                                                                       event_type)
             print_cyan(f"set => {query}")
             self.transaction_bldr(query)
         except Exception as e:

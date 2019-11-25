@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from hellochat.utils.sources.apple import Apple
 from hellochat.utils.sources.facebook import Facebook
 from hellochat.utils.sources.google import Google
+from hellochat.utils.sources.questions_and_answers import QuestionsAndAnswers
 from hellochat.utils.sources.reddit import Reddit
 
 
@@ -27,6 +28,9 @@ def set_compressor(source_name, destination):
     elif source_name == "google":
         google = Google(destination)
         return google
+    elif source_name == "q&a":
+        q_and_a = QuestionsAndAnswers(destination)
+        return q_and_a
 
 
 class Parser:
