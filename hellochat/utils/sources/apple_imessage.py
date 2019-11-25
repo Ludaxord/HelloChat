@@ -3,7 +3,7 @@ import time
 
 import pandas as pd
 
-from hellochat.utils.compression import Compression
+from hellochat.utils.sources.compression import Compression
 from hellochat.utils.tools.printers import print_red, print_magenta, print_cyan, print_green
 
 
