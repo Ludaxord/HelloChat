@@ -5,7 +5,7 @@ from hellochat.utils.sources.compression import Compression
 from hellochat.utils.tools.printers import print_green, print_yellow, print_red, print_cyan, print_magenta, print_blue
 
 
-class FacebookMessenger(Compression):
+class Facebook(Compression):
     def __init__(self, destination_folder):
         super().__init__(f"{destination_folder}/messenger")
         self.init_default_table()

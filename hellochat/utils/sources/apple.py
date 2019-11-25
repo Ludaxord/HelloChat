@@ -7,7 +7,7 @@ from hellochat.utils.sources.compression import Compression
 from hellochat.utils.tools.printers import print_red, print_magenta, print_cyan, print_green
 
 
-class AppleIMessage(Compression):
+class Apple(Compression):
     def __init__(self, destination_folder):
         super().__init__(f"{destination_folder}/imessage")
         self.init_default_table()

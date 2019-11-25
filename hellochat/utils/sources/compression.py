@@ -87,11 +87,11 @@ class Compression:
     def download_dataset(self, url=dataset_source_url):
         datasets = self.__get_dataset(url)
         for dataset in datasets:
-            directory = Path(f"data/{dataset}")
+            directory = Path(f"data/packed/{dataset}")
             try:
                 if not directory.exists():
                     print_blue(f"downloading file {dataset}")
-                    urllib2.urlretrieve(f"{url}{dataset}", f"data/{dataset}", reporthook=report_hook)
+                    urllib2.urlretrieve(f"{url}{dataset}", f"data/packed/{dataset}", reporthook=report_hook)
                     print_green(f"{dataset} file downloaded successfully")
                 else:
                     print_red(f"{dataset} already exists!")
