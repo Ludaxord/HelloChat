@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 
 from hellochat.utils.sources.apple import Apple
 from hellochat.utils.sources.facebook import Facebook
+from hellochat.utils.sources.google import Google
 from hellochat.utils.sources.reddit import Reddit
 
 
@@ -14,15 +15,18 @@ def chat_args():
 
 
 def set_compressor(source_name, destination):
-    if source_name == "imessage":
-        imessage = Apple(destination)
-        return imessage
+    if source_name == "apple":
+        apple = Apple(destination)
+        return apple
     elif source_name == "reddit":
         reddit = Reddit(destination)
         return reddit
-    elif source_name == "messenger":
-        messenger = Facebook(destination)
-        return messenger
+    elif source_name == "facebook":
+        facebook = Facebook(destination)
+        return facebook
+    elif source_name == "google":
+        google = Google(destination)
+        return google
 
 
 class Parser:

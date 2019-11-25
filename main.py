@@ -6,8 +6,8 @@ source = args.source
 sources = args.sources
 destination = "data/unpacked"
 
-print(source)
-print(sources)
+print(f"source => {source}")
+print(f"sources => {sources}")
 
 if source is not None:
     compressor = set_compressor(source, destination)
