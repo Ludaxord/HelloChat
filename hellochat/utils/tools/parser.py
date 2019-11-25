@@ -5,6 +5,7 @@ from hellochat.utils.sources.facebook import Facebook
 from hellochat.utils.sources.google import Google
 from hellochat.utils.sources.questions_and_answers import QuestionsAndAnswers
 from hellochat.utils.sources.reddit import Reddit
+from hellochat.utils.sources.wiki_questions_and_answers import WikiQuestionsAndAnswers
 
 
 def chat_args():
@@ -31,6 +32,9 @@ def set_compressor(source_name, destination):
     elif source_name == "q&a":
         q_and_a = QuestionsAndAnswers(destination)
         return q_and_a
+    elif source_name == "wiki_q&a":
+        wiki_q_and_a = WikiQuestionsAndAnswers(destination)
+        return wiki_q_and_a
 
 
 class Parser:
