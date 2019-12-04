@@ -1,9 +1,9 @@
 import glob
-import io
-import re
-import unicodedata
+import pandas as pd
 
 from hellochat.utils.sources.compression import Compression
+from hellochat.utils.tools.printers import print_green, print_yellow, print_blue, print_red, print_magenta, print_cyan, \
+    print_gray
 
 
 class Translator(Compression):
@@ -14,30 +14,73 @@ class Translator(Compression):
     def init_default_table(self):
         self.cursor, self.connection = self.get_cursor()
         columns = dict(translate_id="INTEGER PRIMARY KEY AUTOINCREMENT", non_translate="TEXT", translate="TEXT",
-                       language="TEXT")
+                       language="TEXT", translate_language="TEXT")
         self.create_table(self.cursor, "translator", columns)
 
     def get_json_files(self):
         json_files = glob.glob(f"{self.destination_folder}/*.txt")
         return json_files
 
-    def __unicode_to_ascii(self, string):
-        return ''.join(c for c in unicodedata.normalize('NFD', string) if unicodedata.category(c) != 'Mn')
+    def set_values_to_db(self):
+        json_files = self.get_json_files()
+        for json_file in json_files:
+            print_green(json_file)
+            with open(json_file, 'r') as temp_f:
+                col_count = [len(li.split(",")) for li in temp_f.readlines()]
+            column_names = [i for i in range(0, max(col_count))]
+            dataset = pd.read_csv(json_file, header=None, delimiter="\t", names=column_names, error_bad_lines=False)
+            self.dataset = dataset
+            for index, data in dataset.iterrows():
+                print_yellow(f"index => {index}")
+                non_translate = None
+                for i, d in enumerate(data):
+                    if not pd.isnull(d):
+                        if i == 0:
+                            non_translate = d
+                        elif i == 1:
+                            translate = d
+                            translate_id = self.__find_translation(translate, non_translate)
+                            print_gray(f"translate_id => {translate_id}")
+                            if translate_id:
+                                self.__update_translation(translate, non_translate, "en", "pl", translate_id)
+                            else:
+                                self.__set_translation(translate, non_translate, "en", "pl")
 
-    def __preprocess_sentence(self, words):
-        w = self.__unicode_to_ascii(words.lower().strip())
-        # Reference:- https://stackoverflow.com/questions/3645931/python-padding-punctuation-with-white-spaces-keeping-punctuation
-        w = re.sub(r"([?.!,¿])", r" \1 ", w)
-        w = re.sub(r'[" "]+', " ", w)
-        # replacing everything with space except (a-z, A-Z, ".", "?", "!", ",")
-        w = re.sub(r"[^a-zA-Z?.!,¿]+", " ", w)
-        w = w.rstrip().strip()
-        w = '<start> ' + w + ' <end>'
-        return w
+    def __find_translation(self, translate, non_translate):
+        try:
+            translate = translate.replace("'", '"')
+            non_translate = non_translate.replace("'", '"')
+            query = "SELECT translate_id FROM translator WHERE translate = '{}' AND non_translate = '{}' LIMIT 1".format(
+                translate, non_translate)
+            if self.cursor is None:
+                self.cursor, self.connection = self.get_cursor()
+            self.cursor.execute(query)
+            result = self.cursor.fetchone()
+            if result is not None:
+                return result[0]
+            else:
+                return False
+        except Exception as e:
+            print_red(f"cannot find synonym {str(e)}")
+            return False
 
-    def __create_dataset(self, path, num_examples):
-        lines = io.open(path, encoding='UTF-8').read().strip().split('\n')
+    def __update_translation(self, translate, non_translate, language, translate_language, translate_id):
+        try:
+            translate = translate.replace("'", '"')
+            non_translate = non_translate.replace("'", '"')
+            query = f"UPDATE translator SET translate = '{translate}', non_translate = '{non_translate}', language = '{language}', translate_language = '{translate_language}' WHERE translate_id = {translate_id};"
+            print_magenta(f"update => {query}")
+            self.transaction_bldr(query)
+        except Exception as e:
+            print_red(f"cannot update message on id {translate_id}, {str(e)}")
 
-        word_pairs = [[self.__preprocess_sentence(w) for w in li.split('\t')] for li in lines[:num_examples]]
-
-        return zip(*word_pairs)
+    def __set_translation(self, translate, non_translate, language, translate_language):
+        try:
+            translate = translate.replace('"', "'")
+            non_translate = non_translate.replace('"', "'")
+            query = """INSERT INTO translator(translate, non_translate, language, translate_language) VALUES ("{}","{}","{}","{}")""".format(
+                translate, non_translate, language, translate_language)
+            print_cyan(f"set => {query}")
+            self.transaction_bldr(query)
+        except Exception as e:
+            print_red(f"cannot update message on id {translate}, {str(e)}")
