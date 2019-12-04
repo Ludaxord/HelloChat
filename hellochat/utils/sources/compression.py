@@ -25,6 +25,7 @@ class Compression:
 
     destination_folder = None
     dataset_source_url = "https://files.pushshift.io/reddit/comments/"
+    dataset = None
 
     def __init__(self, destination_folder):
         self.destination_folder = destination_folder

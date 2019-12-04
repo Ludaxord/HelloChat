@@ -1,3 +1,5 @@
+tensorflow
+numpy
 chardet
 jsoncomment
 zstandard
