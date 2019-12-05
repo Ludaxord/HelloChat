@@ -3,9 +3,9 @@ import os
 
 import pandas as pd
 
+from hellochat.seq2seq.sequences.translator_sequences import TranslatorSequences
 from hellochat.utils.sources.compression import Compression
-from hellochat.utils.tools.printers import print_green, print_yellow, print_blue, print_red, print_magenta, print_cyan, \
-    print_gray
+from hellochat.utils.tools.printers import print_green, print_yellow, print_red, print_magenta, print_cyan, print_gray
 
 
 class Translator(Compression):
@@ -18,6 +18,12 @@ class Translator(Compression):
         columns = dict(translate_id="INTEGER PRIMARY KEY AUTOINCREMENT", non_translate="TEXT", translate="TEXT",
                        language="TEXT", translate_language="TEXT")
         self.create_table(self.cursor, "translator", columns)
+
+    def run_tensorflow(self):
+        translator_sequences = TranslatorSequences("translator", self.cursor, self.connection)
+
+    def run_nltk(self):
+        pass
 
     def get_json_files(self):
         json_files = glob.glob(f"{self.destination_folder}/*.txt")
@@ -71,6 +77,7 @@ class Translator(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find synonym {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __update_translation(self, translate, non_translate, language, translate_language, translate_id):
@@ -82,6 +89,7 @@ class Translator(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {translate_id}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def __set_translation(self, translate, non_translate, language, translate_language):
         try:
@@ -93,3 +101,4 @@ class Translator(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {translate}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()

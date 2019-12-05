@@ -33,6 +33,18 @@ class Compression:
     def set_values_to_db(self):
         pass
 
+    def run_tensorflow(self):
+        pass
+
+    def run_nltk(self):
+        pass
+
+    def run_backend(self, backend):
+        if backend.lower() == "tensorflow":
+            self.run_tensorflow()
+        elif backend.lower() == "nltk":
+            self.run_nltk()
+
     def convert_encoding(self, data):
         try:
             data = data.encode('iso-8859-1').decode('utf-8')

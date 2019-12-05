@@ -71,6 +71,7 @@ class Synonyms(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find synonym {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __update_synonym(self, verb, parent_verb, synonym_id):
@@ -82,6 +83,7 @@ class Synonyms(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {synonym_id}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def __set_synonym(self, verb, parent_verb):
         try:
@@ -93,3 +95,4 @@ class Synonyms(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {verb}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()

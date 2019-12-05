@@ -58,6 +58,7 @@ class QuestionsAndAnswers(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find message {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __set_message(self, article_title, question, answer, difficulty_from_questioner,
@@ -74,6 +75,7 @@ class QuestionsAndAnswers(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {article_title}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def __update_message(self, article_title, question, answer, difficulty_from_questioner,
                          difficulty_from_answerer, article_file):
@@ -87,3 +89,4 @@ class QuestionsAndAnswers(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {article_title}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()

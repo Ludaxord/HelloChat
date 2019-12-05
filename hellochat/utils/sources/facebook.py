@@ -76,6 +76,7 @@ class Facebook(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find message {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __set_message(self, guid, sender_name, timestamp_ms, message_type, content, photos_list):
@@ -91,6 +92,7 @@ class Facebook(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {guid}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def __update_message(self, guid, sender_name, timestamp_ms, message_type, content, photos_list):
         try:
@@ -100,3 +102,4 @@ class Facebook(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {guid}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()

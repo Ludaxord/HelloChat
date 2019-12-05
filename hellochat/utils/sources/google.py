@@ -78,6 +78,7 @@ class Google(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find message {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __set_message(self, event_id, text, sender_id, fallback_name, timestamp, conversation_id, event_type):
@@ -93,6 +94,7 @@ class Google(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {event_id}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def __update_message(self, event_id, text, sender_id, fallback_name, timestamp, conversation_id, event_type):
         try:
@@ -102,3 +104,4 @@ class Google(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {event_id}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()

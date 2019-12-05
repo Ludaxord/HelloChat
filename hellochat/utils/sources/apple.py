@@ -40,6 +40,7 @@ class Apple(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find message {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def set_values_to_db(self):
@@ -139,6 +140,7 @@ class Apple(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {guid}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def __set_message(self, ROWID, guid, text, handle_id, service, account, date, date_read,
                       date_delivered,
@@ -182,3 +184,4 @@ class Apple(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update message on id {guid}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()

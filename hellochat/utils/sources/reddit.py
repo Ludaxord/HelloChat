@@ -91,6 +91,7 @@ class Reddit(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot update comment on id {comment_id}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def insert_parent(self, has_parent, parent_id, comment_id, parent, comment, subreddit, time, score):
         try:
@@ -107,6 +108,7 @@ class Reddit(Compression):
             self.transaction_bldr(query)
         except Exception as e:
             print_red(f"cannot insert parent comment of id {comment_id}, {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
 
     def clean_rows(self, row_counter, data, start_row=0):
         if row_counter > start_row:
@@ -150,6 +152,7 @@ class Reddit(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find score {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __find_parent(self, pid):
@@ -165,6 +168,7 @@ class Reddit(Compression):
                 return False
         except Exception as e:
             print_red(f"cannot find parent {str(e)}")
+            self.cursor, self.connection = self.get_cursor()
             return False
 
     def __format_data(self, data):

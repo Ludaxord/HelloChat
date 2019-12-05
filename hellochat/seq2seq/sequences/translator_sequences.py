@@ -5,11 +5,24 @@ import unicodedata
 from hellochat.seq2seq.sequences.sequence import Sequence
 import tensorflow as tf
 
+from hellochat.utils.tools.printers import print_blue
+
 
 class TranslatorSequences(Sequence):
+    cursor = None
+    connection = None
 
-    def __init__(self, table_name):
+    def __init__(self, table_name, cursor, connection):
         super().__init__(table_name)
+        self.cursor = cursor
+        self.connection = connection
+
+    def init_preprocess(self):
+        query = "SELECT * FROM translator"
+        self.cursor.execute(query)
+        results = self.cursor.fetchall()
+        for result in results:
+            print_blue(f"result => {result}")
 
     def __max_length(self, tensor):
         return max(len(t) for t in tensor)
