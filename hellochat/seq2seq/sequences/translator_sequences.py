@@ -2,10 +2,13 @@ import io
 import re
 import unicodedata
 
+import pandas as pd
+import numpy as np
+
 from hellochat.seq2seq.sequences.sequence import Sequence
 import tensorflow as tf
 
-from hellochat.utils.tools.printers import print_blue
+from hellochat.utils.tools.printers import print_blue, print_magenta, print_red, print_cyan, print_yellow, print_gray
 
 
 class TranslatorSequences(Sequence):
@@ -21,8 +24,24 @@ class TranslatorSequences(Sequence):
         query = "SELECT * FROM translator"
         self.cursor.execute(query)
         results = self.cursor.fetchall()
+        target_arr = np.array([])
+        input_arr = np.array([])
         for result in results:
-            print_blue(f"result => {result}")
+            input_tensor, target_tensor, inp_lang, targ_lang = self.load_dataset(result)
+            max_length_targ, max_length_inp = self.__max_length(target_tensor), self.__max_length(input_tensor)
+            # TODO: Fix
+            np.concatenate((target_arr, target_tensor))
+            np.concatenate((input_arr, input_tensor))
+            print_yellow(
+                f"target translation token => {targ_lang} input translation token => {inp_lang}, target tensor => {target_tensor}, target tensor type => {type(target_tensor)}, input tensor => {input_tensor}, input tensor type => {type(input_tensor)} max input length => {max_length_inp}, max target length => {max_length_targ}")
+        target_dataframe, input_dataframe = self.__create_data_frames(target_arr, input_arr)
+        print_gray(f"target_dataframe => {target_dataframe}, input_dataframe => {input_dataframe}")
+
+    def __create_data_frames(self, target_arr, input_arr):
+        print(f"target_arr => {target_arr}, input_arr => {input_arr}")
+        target_dataframe = pd.DataFrame({"Target": target_arr})
+        input_dataframe = pd.DataFrame({"Input": input_arr})
+        return target_dataframe, input_dataframe
 
     def __max_length(self, tensor):
         return max(len(t) for t in tensor)
@@ -49,13 +68,33 @@ class TranslatorSequences(Sequence):
         w = '<start> ' + w + ' <end>'
         return w
 
-    def __create_dataset(self, path, num_examples):
-        lines = io.open(path, encoding='UTF-8').read().strip().split('\n')
-        word_pairs = [[self.__preprocess_sentence(w) for w in li.split('\t')] for li in lines[:num_examples]]
-        return zip(*word_pairs)
+    def __create_dataset(self, result):
+        word_pairs = []
+        try:
+            translate_language = result[-1]
+            language = result[-2]
+            translate = result[-3].replace('"', "'")
+            non_translate = result[-4].replace('"', "'")
+            preprocessed_translate = self.__preprocess_sentence(translate)
+            preprocessed_non_translate = self.__preprocess_sentence(non_translate)
+            word_pairs.append(preprocessed_non_translate)
+            word_pairs.append(preprocessed_translate)
+            print_blue(
+                f"translate => {translate_language}:{translate} | non_translate => {language}:{non_translate}")
+            print_magenta(
+                f"translate => {translate_language}:{preprocessed_translate} | non_translate => {language}:{preprocessed_non_translate}")
+        except Exception as e:
+            print_red(f"cannot preprocess data from result of structure {result}, {str(e)}")
+        return zip(word_pairs)
 
-    def load_dataset(self, path, num_examples=None):
-        targ_lang, inp_lang = self.__create_dataset(path, num_examples)
+    def __convert(self, lang, tensor):
+        for t in tensor:
+            if t != 0:
+                print_cyan("%d ----> %s" % (t, lang.index_word[t]))
+
+    def load_dataset(self, result):
+        targ_lang, inp_lang = self.__create_dataset(result)
+        print_cyan(f"target translation => {targ_lang[-1]} input translation => {inp_lang[-1]}")
         input_tensor, inp_lang_tokenizer = self.__tokenize(inp_lang)
         target_tensor, targ_lang_tokenizer = self.__tokenize(targ_lang)
         return input_tensor, target_tensor, inp_lang_tokenizer, targ_lang_tokenizer

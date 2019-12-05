@@ -21,6 +21,7 @@ class Translator(Compression):
 
     def run_tensorflow(self):
         translator_sequences = TranslatorSequences("translator", self.cursor, self.connection)
+        translator_sequences.init_preprocess()
 
     def run_nltk(self):
         pass
