@@ -1,4 +1,6 @@
 import glob
+import os
+
 import pandas as pd
 
 from hellochat.utils.sources.compression import Compression
@@ -25,6 +27,8 @@ class Translator(Compression):
         json_files = self.get_json_files()
         for json_file in json_files:
             print_green(json_file)
+            translate_language = self.__find_language(json_file)
+            print_cyan(f"translate language => {translate_language}")
             with open(json_file, 'r') as temp_f:
                 col_count = [len(li.split(",")) for li in temp_f.readlines()]
             column_names = [i for i in range(0, max(col_count))]
@@ -42,9 +46,14 @@ class Translator(Compression):
                             translate_id = self.__find_translation(translate, non_translate)
                             print_gray(f"translate_id => {translate_id}")
                             if translate_id:
-                                self.__update_translation(translate, non_translate, "en", "pl", translate_id)
+                                self.__update_translation(translate, non_translate, "en", translate_language,
+                                                          translate_id)
                             else:
-                                self.__set_translation(translate, non_translate, "en", "pl")
+                                self.__set_translation(translate, non_translate, "en", translate_language)
+
+    def __find_language(self, file_name):
+        base_name = os.path.basename(file_name)
+        return os.path.splitext(base_name)[0]
 
     def __find_translation(self, translate, non_translate):
         try:

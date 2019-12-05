@@ -44,10 +44,19 @@ class Synonyms(Compression):
                             print_blue(f"verb => {verb}")
                             synonym_id = self.__find_synonym(verb)
                             print_gray(f"synonym_id => {synonym_id}")
-                            if synonym_id:
-                                self.__update_synonym(verb, parent_verb, synonym_id)
-                            else:
-                                self.__set_synonym(verb, parent_verb)
+                            self.__set_synonyms(synonym_id, verb, parent_verb)
+
+    def __set_synonyms(self, synonym_id, verb, parent_verb, with_update=False):
+        if not with_update:
+            # Skip updating
+            if not synonym_id:
+                self.__set_synonym(verb, parent_verb)
+        else:
+            # With updating
+            if synonym_id:
+                self.__update_synonym(verb, parent_verb, synonym_id)
+            else:
+                self.__set_synonym(verb, parent_verb)
 
     def __find_synonym(self, verb):
         try:
@@ -66,6 +75,8 @@ class Synonyms(Compression):
 
     def __update_synonym(self, verb, parent_verb, synonym_id):
         try:
+            # verb = verb.replace("'", '"')
+            # parent_verb = parent_verb.replace("'", '"')
             query = f"UPDATE synonyms_dictionary SET synonym = '{verb}', synonym_parent = '{parent_verb}' WHERE synonym_id = {synonym_id};"
             print_magenta(f"update => {query}")
             self.transaction_bldr(query)
@@ -74,6 +85,8 @@ class Synonyms(Compression):
 
     def __set_synonym(self, verb, parent_verb):
         try:
+            # verb = verb.replace('"', "'")
+            # parent_verb = parent_verb.replace('"', "'")
             query = """INSERT INTO synonyms_dictionary(synonym, synonym_parent) VALUES ("{}","{}")""".format(verb,
                                                                                                              parent_verb)
             print_cyan(f"set => {query}")
