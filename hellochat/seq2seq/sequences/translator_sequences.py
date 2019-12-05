@@ -29,8 +29,8 @@ class TranslatorSequences(Sequence):
         for result in results:
             input_tensor, target_tensor, inp_lang, targ_lang = self.load_dataset(result)
             max_length_targ, max_length_inp = self.__max_length(target_tensor), self.__max_length(input_tensor)
-            np.append(target_arr, target_tensor)
-            np.append(input_arr, input_tensor)
+            target_arr = np.append(target_arr, target_tensor)
+            input_arr = np.append(input_arr, input_tensor)
             print_yellow(
                 f"target translation token => {targ_lang} input translation token => {inp_lang}, target tensor => {target_tensor}, target tensor type => {type(target_tensor)}, input tensor => {input_tensor}, input tensor type => {type(input_tensor)} max input length => {max_length_inp}, max target length => {max_length_targ}")
         target_dataframe, input_dataframe = self.__create_data_frames(target_arr, input_arr)
