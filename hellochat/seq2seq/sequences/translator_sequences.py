@@ -4,6 +4,7 @@ import unicodedata
 
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 from hellochat.seq2seq.sequences.sequence import Sequence
 import tensorflow as tf
@@ -90,6 +91,13 @@ class TranslatorSequences(Sequence):
         for t in tensor:
             if t != 0:
                 print_cyan("%d ----> %s" % (t, lang.index_word[t]))
+
+    def __split_data(self, input_tensor, target_tensor, test_size=0.2):
+        input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val = train_test_split(input_tensor,
+                                                                                                        target_tensor,
+                                                                                                        test_size=test_size)
+        print(len(input_tensor_train), len(target_tensor_train), len(input_tensor_val), len(target_tensor_val))
+        return input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val
 
     def load_dataset(self, result):
         targ_lang, inp_lang = self.__create_dataset(result)
