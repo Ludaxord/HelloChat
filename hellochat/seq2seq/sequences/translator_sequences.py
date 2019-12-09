@@ -1,14 +1,12 @@
-import io
 import re
 import unicodedata
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
 from hellochat.seq2seq.sequences.sequence import Sequence
-import tensorflow as tf
-
 from hellochat.utils.tools.printers import print_blue, print_magenta, print_red, print_cyan, print_yellow, print_gray
 
 
@@ -27,15 +25,30 @@ class TranslatorSequences(Sequence):
         results = self.cursor.fetchall()
         target_arr = np.array([])
         input_arr = np.array([])
+        target_lang_list = list()
+        input_lang_list = list()
         for result in results:
             input_tensor, target_tensor, inp_lang, targ_lang = self.load_dataset(result)
             max_length_targ, max_length_inp = self.__max_length(target_tensor), self.__max_length(input_tensor)
             target_arr = np.append(target_arr, target_tensor)
             input_arr = np.append(input_arr, input_tensor)
+            target_lang_list.append(targ_lang)
+            input_lang_list.append(inp_lang)
             print_yellow(
                 f"target translation token => {targ_lang} input translation token => {inp_lang}, target tensor => {target_tensor}, target tensor type => {type(target_tensor)}, input tensor => {input_tensor}, input tensor type => {type(input_tensor)} max input length => {max_length_inp}, max target length => {max_length_targ}")
         target_dataframe, input_dataframe = self.__create_data_frames(target_arr, input_arr)
         print_gray(f"target_dataframe => {target_dataframe}, input_dataframe => {input_dataframe}")
+        input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val = self.__split_data(
+            input_dataframe, target_dataframe)
+        self.__input_target_iterator(input_lang_list, target_lang_list, input_tensor_train, target_tensor_train)
+
+    def __input_target_iterator(self, input_lang_list, target_lang_list, input_tensor_train, target_tensor_train):
+        for inp, targ in zip(input_lang_list, target_lang_list):
+            print("Input Language; index to word mapping")
+            self.__convert(inp, input_tensor_train[0])
+            print("Target Language; index to word mapping")
+            self.__convert(targ, target_tensor_train[0])
+            dataset = self.__create_tf_dataset(input_tensor_train, inp, target_tensor_train, targ)
 
     def __create_data_frames(self, target_arr, input_arr):
         print(f"target_arr => {target_arr}, input_arr => {input_arr}")
@@ -45,6 +58,18 @@ class TranslatorSequences(Sequence):
 
     def __max_length(self, tensor):
         return max(len(t) for t in tensor)
+
+    def __create_tf_dataset(self, input_tensor_train, inp_lang, target_tensor_train, targ_size, batch_size=64,
+                            embedding_dim=256,
+                            units=1024, drop_remainder=True):
+        buffer_size = len(input_tensor_train)
+        step_per_epoch = len(input_tensor_train)
+        vocab_inp_size = len(inp_lang.word_index) + 1
+        vocab_tar_size = len(targ_size.word_index) + 1
+
+        dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_train)).shuffle(buffer_size)
+        dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+        return dataset
 
     def __tokenize(self, lang):
         lang_tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='')
