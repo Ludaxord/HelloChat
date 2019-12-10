@@ -6,8 +6,12 @@ import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
+from hellochat.seq2seq.coders.bahdanau_attention import BahdanauAttention
+from hellochat.seq2seq.coders.decoder import Decoder
+from hellochat.seq2seq.coders.encoder import Encoder
 from hellochat.seq2seq.sequences.sequence import Sequence
-from hellochat.utils.tools.printers import print_blue, print_magenta, print_red, print_cyan, print_yellow, print_gray
+from hellochat.utils.tools.printers import print_blue, print_magenta, print_red, print_cyan, print_yellow, print_gray, \
+    print_green
 
 
 class TranslatorSequences(Sequence):
@@ -69,7 +73,31 @@ class TranslatorSequences(Sequence):
 
         dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_train)).shuffle(buffer_size)
         dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+
+        self.__example(vocab_inp_size, dataset, embedding_dim, units, batch_size, vocab_tar_size)
+
         return dataset
+
+    def __example(self, vocab_inp_size, dataset, embedding_dim, units, batch_size, vocab_tar_size):
+
+        example_input_batch, example_target_batch = next(iter(dataset))
+
+        encoder = Encoder(vocab_inp_size, embedding_dim, units, batch_size)
+        sample_hidden = encoder.initialize_hidden_state()
+        sample_output, sample_hidden = encoder(example_input_batch, sample_hidden)
+
+        attention_layer = BahdanauAttention(10)
+        attention_result, attention_weights = attention_layer(sample_hidden, sample_output)
+
+        decoder = Decoder(vocab_tar_size, embedding_dim, units, batch_size)
+        sample_decoder_output, _, _ = decoder(tf.random.uniform((batch_size, 1)),
+                                              sample_hidden, sample_output)
+
+        print_green(f"Encoder output shape (batch size, sequence length, units) {sample_output.shape}")
+        print_blue(f"Encoder hidden state shape (batch size, units) {sample_hidden.shape}")
+        print_green("Attention result shape: (batch size, units) {}".format(attention_result.shape))
+        print_blue("Attention weights shape: (batch_size, sequence_length, 1) {}".format(attention_weights.shape))
+        print('Decoder output shape: (batch_size, vocab size) {}'.format(sample_decoder_output.shape))
 
     def __tokenize(self, lang):
         lang_tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='')
