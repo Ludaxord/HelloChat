@@ -2,7 +2,7 @@ from tensorflow.keras import Model
 from tensorflow.keras.layers import Embedding, GRU, Dense
 from tensorflow import concat, expand_dims, reshape
 
-from hellochat.seq2seq.coders.bahdanau_attention import BahdanauAttention
+from hellochat.seq2seq.layers.bahdanau_attention import BahdanauAttention
 
 
 class Decoder(Model):

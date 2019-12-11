@@ -4,12 +4,13 @@ import unicodedata
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 
-from hellochat.seq2seq.coders.bahdanau_attention import BahdanauAttention
-from hellochat.seq2seq.coders.decoder import Decoder
-from hellochat.seq2seq.coders.encoder import Encoder
-from hellochat.seq2seq.sequences.sequence import Sequence
+from hellochat.seq2seq.layers.bahdanau_attention import BahdanauAttention
+from hellochat.seq2seq.models.decoder import Decoder
+from hellochat.seq2seq.models.encoder import Encoder
+from hellochat.seq2seq.sequences.sequence import Sequence, preprocess_sentence
 from hellochat.utils.tools.printers import print_blue, print_magenta, print_red, print_cyan, print_yellow, print_gray, \
     print_green
 
@@ -109,18 +110,6 @@ class TranslatorSequences(Sequence):
 
         return tensor, lang_tokenizer
 
-    def __unicode_to_ascii(self, string):
-        return ''.join(c for c in unicodedata.normalize('NFD', string) if unicodedata.category(c) != 'Mn')
-
-    def __preprocess_sentence(self, words):
-        w = self.__unicode_to_ascii(words.lower().strip())
-        w = re.sub(r"([?.!,¿])", r" \1 ", w)
-        w = re.sub(r'[" "]+', " ", w)
-        w = re.sub(r"[^a-zA-Z?.!,¿]+", " ", w)
-        w = w.rstrip().strip()
-        w = '<start> ' + w + ' <end>'
-        return w
-
     def __create_dataset(self, result):
         word_pairs = []
         try:
@@ -128,8 +117,8 @@ class TranslatorSequences(Sequence):
             language = result[-2]
             translate = result[-3].replace('"', "'")
             non_translate = result[-4].replace('"', "'")
-            preprocessed_translate = self.__preprocess_sentence(translate)
-            preprocessed_non_translate = self.__preprocess_sentence(non_translate)
+            preprocessed_translate = preprocess_sentence(translate)
+            preprocessed_non_translate = preprocess_sentence(non_translate)
             word_pairs.append(preprocessed_non_translate)
             word_pairs.append(preprocessed_translate)
             print_blue(
