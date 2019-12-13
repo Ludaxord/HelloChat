@@ -3,6 +3,10 @@ from tensorflow import expand_dims, reduce_sum
 import tensorflow as tf
 
 
+#
+# https://arxiv.org/pdf/1409.0473.pdf
+#
+
 class BahdanauAttention(Layer):
     def __init__(self, units):
         super().__init__()
