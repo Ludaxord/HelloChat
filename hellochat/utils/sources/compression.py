@@ -33,15 +33,15 @@ class Compression:
     def set_values_to_db(self):
         pass
 
-    def run_tensorflow(self):
+    def run_tensorflow(self, lang=None):
         pass
 
     def run_nltk(self):
         pass
 
-    def run_backend(self, backend):
+    def run_backend(self, backend, lang=None):
         if backend.lower() == "tensorflow":
-            self.run_tensorflow()
+            self.run_tensorflow(lang)
         elif backend.lower() == "nltk":
             self.run_nltk()
 

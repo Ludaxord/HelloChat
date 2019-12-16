@@ -1,15 +1,12 @@
-import re
-import unicodedata
-
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
 
-from hellochat.seq2seq.coders.bahdanau_attention import BahdanauAttention
-from hellochat.seq2seq.coders.decoder import Decoder
-from hellochat.seq2seq.coders.encoder import Encoder
-from hellochat.seq2seq.sequences.sequence import Sequence
+from hellochat.seq2seq.layers.bahdanau_attention import BahdanauAttention
+from hellochat.seq2seq.models.decoder import Decoder
+from hellochat.seq2seq.models.encoder import Encoder
+from hellochat.seq2seq.sequences.sequence import Sequence, preprocess_sentence
 from hellochat.utils.tools.printers import print_blue, print_magenta, print_red, print_cyan, print_yellow, print_gray, \
     print_green
 
@@ -23,42 +20,94 @@ class TranslatorSequences(Sequence):
         self.cursor = cursor
         self.connection = connection
 
-    def init_preprocess(self):
-        query = "SELECT * FROM translator"
-        self.cursor.execute(query)
-        results = self.cursor.fetchall()
-        target_arr = np.array([])
-        input_arr = np.array([])
-        target_lang_list = list()
-        input_lang_list = list()
-        for result in results:
-            input_tensor, target_tensor, inp_lang, targ_lang = self.load_dataset(result)
-            max_length_targ, max_length_inp = self.__max_length(target_tensor), self.__max_length(input_tensor)
-            target_arr = np.append(target_arr, target_tensor)
-            input_arr = np.append(input_arr, input_tensor)
-            target_lang_list.append(targ_lang)
-            input_lang_list.append(inp_lang)
-            print_yellow(
-                f"target translation token => {targ_lang} input translation token => {inp_lang}, target tensor => {target_tensor}, target tensor type => {type(target_tensor)}, input tensor => {input_tensor}, input tensor type => {type(input_tensor)} max input length => {max_length_inp}, max target length => {max_length_targ}")
-        target_dataframe, input_dataframe = self.__create_data_frames(target_arr, input_arr)
-        print_gray(f"target_dataframe => {target_dataframe}, input_dataframe => {input_dataframe}")
+    def init_preprocess(self, lang=None):
+        if lang is None:
+            query = "SELECT * FROM translator"
+        else:
+            query = f"SELECT * FROM translator WHERE translate_language = '{lang}'"
+        print_magenta(query)
+        self.__get_pandas_sql(query)
+
+    def __get_pandas_sql(self, query):
+        results = pd.read_sql(query, self.connection)
+        translations = results.iloc[:, 1:3]
+        non_trans = results.loc[:, "non_translate"]
+        trans = results.loc[:, "translate"]
+        print_cyan(results)
+        print_green(translations)
+        trans_tensor, non_trans_tensor, trans_token, non_trans_token = self.__preprocess_translation(translations,
+                                                                                                     non_trans, trans)
+        dataset = pd.DataFrame(
+            {"non_translate": non_trans, "translate": trans, "non_translate_tensor": non_trans_tensor,
+             "translate_tensor": trans_tensor})
+        print_green(dataset)
+        # print_blue(f"trans_token => {trans_token} ||| non_trans_token => {non_trans_token}")
+        # Experimental
         input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val = self.__split_data(
-            input_dataframe, target_dataframe)
-        self.__input_target_iterator(input_lang_list, target_lang_list, input_tensor_train, target_tensor_train)
+            dataset.loc[:, "non_translate_tensor"], dataset.loc[:, "translate_tensor"])
+        self.__input_target_iterator(non_trans_token, trans_token, input_tensor_train, target_tensor_train)
+
+    def __preprocess_translation(self, translations, non_trans, trans):
+        print_magenta(f"type {type(non_trans)}, {type(trans)}")
+        trans_token_arr = dict()
+        trans_tensor_arr = np.array([])
+        non_trans_token_arr = dict()
+        non_trans_tensor_arr = np.array([])
+
+        for index, row in translations.iterrows():
+            non_translate = row["non_translate"]
+            nt = non_trans[index]
+            translate = row["translate"]
+            t = trans[index]
+            print_blue(f"non_translate => {non_translate} <==> {nt} ")
+            print_magenta(f"translate => {translate} <==> {t}")
+            if non_translate == nt and translate == t:
+                non_trans[index] = preprocess_sentence(non_translate)
+                trans[index] = preprocess_sentence(translate)
+                trans_tensor, trans_tokenized = self.__tokenize(trans[index])
+                non_trans_tensor, non_trans_tokenized = self.__tokenize(non_trans[index])
+
+                max_length_targ, max_length_inp = self.__max_length(trans_tensor), self.__max_length(non_trans_tensor)
+
+                trans_str_tensor = ""
+                non_trans_str_tensor = ""
+
+                for tt in trans_tensor[0]:
+                    trans_str_tensor += f"{tt} || "
+                k = trans_str_tensor.rfind(" || ")
+                trans_str_tensor = trans_str_tensor[:k] + "" + trans_str_tensor[k + 1:]
+
+                for ntt in non_trans_tensor[0]:
+                    non_trans_str_tensor += f"{ntt} || "
+                n = non_trans_str_tensor.rfind(" || ")
+                non_trans_str_tensor = non_trans_str_tensor[:n] + "" + non_trans_str_tensor[n + 1:]
+
+                print_gray(f"decoded => {trans_str_tensor} |and| {non_trans_str_tensor}")
+
+                trans_tensor_arr = np.append(trans_tensor_arr, trans_str_tensor)
+                non_trans_tensor_arr = np.append(non_trans_tensor_arr, non_trans_str_tensor)
+
+                trans_token_arr[index] = trans_tokenized
+                non_trans_token_arr[index] = non_trans_tokenized
+                print_yellow(f"non translate => {non_trans[index]}")
+                print_yellow(f"translate => {trans[index]}")
+        return trans_tensor_arr, non_trans_tensor_arr, trans_token_arr, non_trans_token_arr
 
     def __input_target_iterator(self, input_lang_list, target_lang_list, input_tensor_train, target_tensor_train):
-        for inp, targ in zip(input_lang_list, target_lang_list):
+        dc = set(input_lang_list) & set(target_lang_list)
+        # for inp, targ in zip(input_lang_list, target_lang_list):
+        for i in dc:
+            inp = input_lang_list[i]
+            inp_tensor = input_tensor_train[i]
+            targ = target_lang_list[i]
+            targ_tensor = target_tensor_train[i]
+            print_blue(f"{inp}")
+            print_green(f"{targ}")
             print("Input Language; index to word mapping")
-            self.__convert(inp, input_tensor_train[0])
+            self.__convert(inp, inp_tensor)
             print("Target Language; index to word mapping")
-            self.__convert(targ, target_tensor_train[0])
-            dataset = self.__create_tf_dataset(input_tensor_train, inp, target_tensor_train, targ)
-
-    def __create_data_frames(self, target_arr, input_arr):
-        print(f"target_arr => {target_arr}, input_arr => {input_arr}")
-        target_dataframe = pd.DataFrame({"Target": target_arr})
-        input_dataframe = pd.DataFrame({"Input": input_arr})
-        return target_dataframe, input_dataframe
+            self.__convert(targ, targ_tensor)
+            # dataset = self.__create_tf_dataset(input_tensor_train, inp, target_tensor_train, targ)
 
     def __max_length(self, tensor):
         return max(len(t) for t in tensor)
@@ -101,60 +150,39 @@ class TranslatorSequences(Sequence):
 
     def __tokenize(self, lang):
         lang_tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='')
-        lang_tokenizer.fit_on_texts(lang)
+        lang_tokenizer.fit_on_texts([lang])
 
-        tensor = lang_tokenizer.texts_to_sequences(lang)
+        tensor = lang_tokenizer.texts_to_sequences([lang])
 
         tensor = tf.keras.preprocessing.sequence.pad_sequences(tensor, padding='post')
 
+        print_cyan(f"tokenize lang => {lang} with tensor {tensor}")
+        print_red(f"tokenized word index {lang_tokenizer.word_index}")
+
         return tensor, lang_tokenizer
 
-    def __unicode_to_ascii(self, string):
-        return ''.join(c for c in unicodedata.normalize('NFD', string) if unicodedata.category(c) != 'Mn')
-
-    def __preprocess_sentence(self, words):
-        w = self.__unicode_to_ascii(words.lower().strip())
-        w = re.sub(r"([?.!,¿])", r" \1 ", w)
-        w = re.sub(r'[" "]+', " ", w)
-        w = re.sub(r"[^a-zA-Z?.!,¿]+", " ", w)
-        w = w.rstrip().strip()
-        w = '<start> ' + w + ' <end>'
-        return w
-
-    def __create_dataset(self, result):
-        word_pairs = []
-        try:
-            translate_language = result[-1]
-            language = result[-2]
-            translate = result[-3].replace('"', "'")
-            non_translate = result[-4].replace('"', "'")
-            preprocessed_translate = self.__preprocess_sentence(translate)
-            preprocessed_non_translate = self.__preprocess_sentence(non_translate)
-            word_pairs.append(preprocessed_non_translate)
-            word_pairs.append(preprocessed_translate)
-            print_blue(
-                f"translate => {translate_language}:{translate} | non_translate => {language}:{non_translate}")
-            print_magenta(
-                f"translate => {translate_language}:{preprocessed_translate} | non_translate => {language}:{preprocessed_non_translate}")
-        except Exception as e:
-            print_red(f"cannot preprocess data from result of structure {result}, {str(e)}")
-        return zip(word_pairs)
-
     def __convert(self, lang, tensor):
-        for t in tensor:
+        print_yellow(f"tensor => {tensor}")
+        print_magenta(f"convert word index {lang.word_index}")
+        tensors = tensor.split("||")
+        print_blue(f"tensors => {tensors}")
+
+        tensors = [int(i) for i in tensors]
+        print_green(f"tensors int => {tensors}")
+        for t in tensors:
+            print_yellow(f"tensor index {t}")
             if t != 0:
-                print_cyan("%d ----> %s" % (t, lang.index_word[t]))
+                try:
+                    print_cyan("%d ----> %s" % (t, lang.index_word[t]))
+                except Exception as e:
+                    print_red(f"no index of {t} in {lang.word_index}")
+                    print_red(f"{str(e)}")
 
     def __split_data(self, input_tensor, target_tensor, test_size=0.2):
+        print(input_tensor.shape)
+        print(target_tensor.shape)
         input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val = train_test_split(input_tensor,
                                                                                                         target_tensor,
                                                                                                         test_size=test_size)
         print(len(input_tensor_train), len(target_tensor_train), len(input_tensor_val), len(target_tensor_val))
         return input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val
-
-    def load_dataset(self, result):
-        targ_lang, inp_lang = self.__create_dataset(result)
-        print_cyan(f"target translation => {targ_lang[-1]} input translation => {inp_lang[-1]}")
-        input_tensor, inp_lang_tokenizer = self.__tokenize(inp_lang)
-        target_tensor, targ_lang_tokenizer = self.__tokenize(targ_lang)
-        return input_tensor, target_tensor, inp_lang_tokenizer, targ_lang_tokenizer

@@ -17,7 +17,10 @@ def chat_args():
               {"command": "--sources", "nargs": '+',
                "help": "list of source type options: reddit, messenger, imessage"},
               {"command": "--engine", "type": str,
-               "help": "list of backend engines used to run deep learning model"}]).get_args()
+               "help": "backend engine used to run deep learning model"},
+              {"command": "--lang", "type": str,
+               "help": "language use to translator for deep learning model"}
+              ]).get_args()
 
 
 def set_compressor(source_name, destination):

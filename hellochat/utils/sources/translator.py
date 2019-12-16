@@ -19,9 +19,9 @@ class Translator(Compression):
                        language="TEXT", translate_language="TEXT")
         self.create_table(self.cursor, "translator", columns)
 
-    def run_tensorflow(self):
+    def run_tensorflow(self, lang=None):
         translator_sequences = TranslatorSequences("translator", self.cursor, self.connection)
-        translator_sequences.init_preprocess()
+        translator_sequences.init_preprocess(lang)
 
     def run_nltk(self):
         pass
