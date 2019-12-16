@@ -1,22 +1,24 @@
-from tensorflow.keras import Model
-from tensorflow.keras.layers import Embedding, GRU
-from tensorflow import zeros
+import tensorflow as tf
+
+from hellochat.utils.tools.printers import print_green, print_yellow
 
 
-class Encoder(Model):
-
-    def __init__(self, vocabulary_size, embedding_dim, encoded_units, batch_size):
-        super().__init__()
-        self.batch_size = batch_size
-        self.encoded_units = encoded_units
-        self.embedding = Embedding(vocabulary_size, embedding_dim)
-        self.gru = GRU(self.encoded_units, return_sequences=True, return_state=True,
-                       recurent_initializer='glorot_uniform')
+class Encoder(tf.keras.Model):
+    def __init__(self, vocab_size, embedding_dim, enc_units, batch_sz):
+        super(Encoder, self).__init__()
+        self.batch_sz = batch_sz
+        self.enc_units = enc_units
+        self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+        self.gru = tf.keras.layers.GRU(self.enc_units,
+                                       return_sequences=True,
+                                       return_state=True,
+                                       recurrent_initializer='glorot_uniform')
 
     def __call__(self, x, hidden):
+        print_yellow(f"x => {x}")
         x = self.embedding(x)
         output, state = self.gru(x, initial_state=hidden)
         return output, state
 
     def initialize_hidden_state(self):
-        return zeros((self.batch_sz, self.enc_units))
+        return tf.zeros((self.batch_sz, self.enc_units))

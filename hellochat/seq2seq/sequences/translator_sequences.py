@@ -1,7 +1,8 @@
+import time
+
 import numpy as np
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
 from sklearn.model_selection import train_test_split
 
 from hellochat.seq2seq.layers.bahdanau_attention import BahdanauAttention
@@ -74,14 +75,14 @@ class TranslatorSequences(Sequence):
                 non_trans_str_tensor = ""
 
                 for tt in trans_tensor[0]:
-                    trans_str_tensor += f"{tt} || "
-                k = trans_str_tensor.rfind(" || ")
-                trans_str_tensor = trans_str_tensor[:k] + "" + trans_str_tensor[k + 1:]
+                    trans_str_tensor += f"{tt}||"
+                k = trans_str_tensor.rfind("||")
+                trans_str_tensor = trans_str_tensor[:k] + "" + trans_str_tensor[k + 2:]
 
                 for ntt in non_trans_tensor[0]:
-                    non_trans_str_tensor += f"{ntt} || "
-                n = non_trans_str_tensor.rfind(" || ")
-                non_trans_str_tensor = non_trans_str_tensor[:n] + "" + non_trans_str_tensor[n + 1:]
+                    non_trans_str_tensor += f"{ntt}||"
+                n = non_trans_str_tensor.rfind("||")
+                non_trans_str_tensor = non_trans_str_tensor[:n] + "" + non_trans_str_tensor[n + 2:]
 
                 print_gray(f"decoded => {trans_str_tensor} |and| {non_trans_str_tensor}")
 
@@ -96,41 +97,55 @@ class TranslatorSequences(Sequence):
 
     def __input_target_iterator(self, input_lang_list, target_lang_list, input_tensor_train, target_tensor_train):
         dc = set(input_lang_list) & set(target_lang_list)
-        # for inp, targ in zip(input_lang_list, target_lang_list):
         for i in dc:
-            inp = input_lang_list[i]
-            inp_tensor = input_tensor_train[i]
-            targ = target_lang_list[i]
-            targ_tensor = target_tensor_train[i]
-            print_blue(f"{inp}")
-            print_green(f"{targ}")
-            print("Input Language; index to word mapping")
-            self.__convert(inp, inp_tensor)
-            print("Target Language; index to word mapping")
-            self.__convert(targ, targ_tensor)
-            # dataset = self.__create_tf_dataset(input_tensor_train, inp, target_tensor_train, targ)
+            print_green(f"dc index: {i}")
+            try:
+                inp = input_lang_list[i]
+                inp_tensor = input_tensor_train[i]
+                targ = target_lang_list[i]
+                targ_tensor = target_tensor_train[i]
+                print("Input Language; index to word mapping")
+                self.__convert(inp, inp_tensor)
+                print("Target Language; index to word mapping")
+                self.__convert(targ, targ_tensor)
+                try:
+                    dataset = self.__create_tf_dataset(input_tensor_train, inp, target_tensor_train, targ)
+                    print_gray(dataset)
+                except Exception as e:
+                    print_red(f"exception tf dataset {str(e)}")
+            except Exception as e:
+                print_red(f"-----------------------------------!#ERROR------------------------------------------------")
+                print_red(f"cannot get value of index {i}")
+                print_red(f"Exception: {str(e)}")
 
     def __max_length(self, tensor):
         return max(len(t) for t in tensor)
 
-    def __create_tf_dataset(self, input_tensor_train, inp_lang, target_tensor_train, targ_size, batch_size=64,
-                            embedding_dim=256,
-                            units=1024, drop_remainder=True):
-        buffer_size = len(input_tensor_train)
-        step_per_epoch = len(input_tensor_train)
+    def __create_tf_dataset(self, input_tensor_train, inp_lang, target_tensor_train, targ_lang):
+        print_yellow(input_tensor_train)
+        print_green(target_tensor_train)
+        input_tensor_train, target_tensor_train = self.__convert_series_of_str_to_list(input_tensor_train,
+                                                                                       target_tensor_train)
+
+        BUFFER_SIZE = len(input_tensor_train)
+        BATCH_SIZE = 64
+        steps_per_epoch = len(input_tensor_train) // BATCH_SIZE
+        embedding_dim = 256
+        units = 1024
         vocab_inp_size = len(inp_lang.word_index) + 1
-        vocab_tar_size = len(targ_size.word_index) + 1
+        vocab_tar_size = len(targ_lang.word_index) + 1
 
-        dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_train)).shuffle(buffer_size)
-        dataset = dataset.batch(batch_size, drop_remainder=drop_remainder)
+        dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_train)).shuffle(BUFFER_SIZE)
+        dataset = dataset.batch(BATCH_SIZE, drop_remainder=True)
 
-        self.__example(vocab_inp_size, dataset, embedding_dim, units, batch_size, vocab_tar_size)
+        self.__example(vocab_inp_size, dataset, embedding_dim, units, BATCH_SIZE, vocab_tar_size)
 
         return dataset
 
     def __example(self, vocab_inp_size, dataset, embedding_dim, units, batch_size, vocab_tar_size):
 
         example_input_batch, example_target_batch = next(iter(dataset))
+        print_cyan(f"example => {example_input_batch.shape} || {example_target_batch.shape}")
 
         encoder = Encoder(vocab_inp_size, embedding_dim, units, batch_size)
         sample_hidden = encoder.initialize_hidden_state()
@@ -162,14 +177,45 @@ class TranslatorSequences(Sequence):
 
         return tensor, lang_tokenizer
 
-    def __convert(self, lang, tensor):
+    def __create_list_from_string(self, tensor):
         print_yellow(f"tensor => {tensor}")
-        print_magenta(f"convert word index {lang.word_index}")
         tensors = tensor.split("||")
         print_blue(f"tensors => {tensors}")
-
         tensors = [int(i) for i in tensors]
         print_green(f"tensors int => {tensors}")
+        return tensors
+
+    def __convert_series_of_str_to_list(self, input_lang_list, target_lang_list):
+        connected_dc = zip(input_lang_list, target_lang_list)
+        print_magenta(f"DC => {connected_dc}")
+        for index, (i, t) in enumerate(connected_dc):
+            print_magenta(f"{index}. {i} => {t}")
+
+            try:
+                print_yellow(f"before input => {input_lang_list[index]}")
+                if type(input_lang_list[index]) is not list:
+                    input_lang_list[index] = self.__create_list_from_string(input_lang_list[index])
+                else:
+                    print_gray(f"{input_lang_list[index]} is already list")
+                print_blue(f"after input => {input_lang_list[index]}")
+            except Exception as e:
+                print_red(f"cannot convert series at index {index}, with input {i} {str(e)}")
+
+            try:
+                print_yellow(f"before target => {target_lang_list[index]}")
+                if type(target_lang_list[index]) is not list:
+                    target_lang_list[index] = self.__create_list_from_string(target_lang_list[index])
+                else:
+                    print_gray(f"{target_lang_list[index]} is already list")
+                print_blue(f"after target => {target_lang_list[index]}")
+            except Exception as e:
+                print_red(f"cannot convert series at index {index}, with target {t} {str(e)}")
+
+        return input_lang_list, target_lang_list
+
+    def __convert(self, lang, tensor):
+        print_magenta(f"convert word index {lang.word_index}")
+        tensors = self.__create_list_from_string(tensor)
         for t in tensors:
             print_yellow(f"tensor index {t}")
             if t != 0:
