@@ -19,7 +19,9 @@ def chat_args():
               {"command": "--engine", "type": str,
                "help": "backend engine used to run deep learning model"},
               {"command": "--lang", "type": str,
-               "help": "language use to translator for deep learning model"}
+               "help": "language use to translator for deep learning model"},
+              {"command": "--words", "nargs": '+',
+               "help": "list of words to stem"}
               ]).get_args()
 
 
