@@ -83,4 +83,7 @@ class Parser:
                 arg_action = arg.get("action")
                 arg_type = arg.get("type")
                 arg_help = arg.get("help")
-                self.parser.add_argument(arg_command, type=arg_type, nargs=arg_nargs, action=arg_action, help=arg_help)
+                arg_metavar = arg.get("metavar")
+                self.parser.add_argument(arg_command, type=arg_type, nargs=arg_nargs, action=arg_action, help=arg_help,
+                                         metavar=arg_metavar)
+
