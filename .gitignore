@@ -5,3 +5,5 @@ data
 hello_chat_main.db
 hello_chat_main.db-journal
 notebooks/training_checkpoints
+
+
